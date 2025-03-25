@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { ChangeEvent, useState } from "react"
 import { useOutlet } from "@/contexts/outlet-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -34,91 +34,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-// Sample product data
-const productsData = [
-  {
-    id: 1,
-    name: "Roti Tawar",
-    category: "Roti",
-    price: 15000,
-    cost: 8000,
-    stock: 25,
-    minStock: 10,
-    description: "Roti tawar lembut dengan tekstur yang sempurna",
-    isActive: true,
-    image: "/placeholder.svg?height=100&width=100",
-    outlet: "Semua Outlet",
-  },
-  {
-    id: 2,
-    name: "Donat Coklat",
-    category: "Donat",
-    price: 8000,
-    cost: 4000,
-    stock: 18,
-    minStock: 5,
-    description: "Donat dengan taburan coklat premium",
-    isActive: true,
-    image: "/placeholder.svg?height=100&width=100",
-    outlet: "Outlet Pusat",
-  },
-  {
-    id: 3,
-    name: "Kue Lapis",
-    category: "Kue",
-    price: 25000,
-    cost: 15000,
-    stock: 10,
-    minStock: 3,
-    description: "Kue lapis dengan cita rasa tradisional",
-    isActive: true,
-    image: "/placeholder.svg?height=100&width=100",
-    outlet: "Semua Outlet",
-  },
-  {
-    id: 4,
-    name: "Croissant",
-    category: "Pastry",
-    price: 18000,
-    cost: 10000,
-    stock: 12,
-    minStock: 5,
-    description: "Croissant dengan lapisan yang renyah",
-    isActive: true,
-    image: "/placeholder.svg?height=100&width=100",
-    outlet: "Outlet Cabang Selatan",
-  },
-  {
-    id: 5,
-    name: "Brownies",
-    category: "Kue",
-    price: 20000,
-    cost: 12000,
-    stock: 8,
-    minStock: 4,
-    description: "Brownies coklat yang lembut dan moist",
-    isActive: false,
-    image: "/placeholder.svg?height=100&width=100",
-    outlet: "Semua Outlet",
-  },
-  {
-    id: 6,
-    name: "Bolu Pandan",
-    category: "Kue",
-    price: 22000,
-    cost: 13000,
-    stock: 15,
-    minStock: 5,
-    description: "Bolu dengan aroma pandan yang khas",
-    isActive: true,
-    image: "/placeholder.svg?height=100&width=100",
-    outlet: "Outlet Cabang Timur",
-  },
-]
-
-// Sample categories
-const categories = ["Semua", "Roti", "Donat", "Kue", "Pastry"]
+import { getAllProductsByOutlet } from "@/services/product-service"
+import { getAllCategories } from "@/services/category-service"
+import { getAllOutlets } from "@/services/outlet-service"
+import { Checkbox } from "../ui/checkbox"
+import { ProductInput } from "@/types/product"
 
 export default function ProductsContent() {
   const { currentOutlet } = useOutlet()
@@ -127,13 +47,15 @@ export default function ProductsContent() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState("Semua")
-  const [products, setProducts] = useState(productsData)
+  // const [products, setProducts] = useState(productsData)
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isEditProductOpen, setIsEditProductOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [newProduct, setNewProduct] = useState({
     name: "",
+    sku: "",
     category: "",
     price: "",
     cost: "",
@@ -144,14 +66,23 @@ export default function ProductsContent() {
     outlet: "Semua Outlet",
   })
 
-  // Filter products based on search query and category
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = activeCategory === "Semua" || product.category === activeCategory
-    return matchesSearch && matchesCategory
-  })
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    description: '',
+    price: 0,
+    category_id: '',
+    image: null,
+    is_active: false,
+    outlet_ids: [],
+    quantity: 0,
+    min_stock: 0,
+  });
+
+  const query = getAllProductsByOutlet(currentOutlet?.id || 0)
+  const { data: products, isLoading, refetch: refetchProducts } = query()
+  const { data: categories } = getAllCategories()
+  const { data: outlets } = getAllOutlets()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -168,29 +99,56 @@ export default function ProductsContent() {
 
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault()
-    const productToAdd = {
-      id: products.length + 1,
-      name: newProduct.name,
-      category: newProduct.category,
-      price: Number.parseInt(newProduct.price),
-      cost: Number.parseInt(newProduct.cost),
-      stock: Number.parseInt(newProduct.stock),
-      minStock: Number.parseInt(newProduct.minStock),
-      description: newProduct.description,
-      isActive: newProduct.isActive,
-      image: "/placeholder.svg?height=100&width=100",
-      outlet: newProduct.outlet,
-    }
+    // const productToAdd = {
+    //   // id: products.length + 1,
+    //   name: newProduct.name,
+    //   sku: newProduct.sku,
+    //   category: newProduct.category,
+    //   price: Number.parseInt(newProduct.price),
+    //   // cost: Number.parseInt(newProduct.cost),
+    //   stock: Number.parseInt(newProduct.stock),
+    //   minStock: Number.parseInt(newProduct.minStock),
+    //   description: newProduct.description,
+    //   isActive: newProduct.isActive,
+    //   image: newProduct.image,
+    //   outlet: newProduct.outlet,
+    // }
 
-    setProducts([...products, productToAdd])
-    setIsAddProductOpen(false)
-    resetForm()
+    const formDataToSend = new FormData();
+    Object.keys(formData).forEach((key) => {
+      const value = formData[key as keyof ProductInput];
+      if (key === 'outlet_ids') {
+        formDataToSend.append(key, JSON.stringify(value));
+      } else if (key === 'image' && value instanceof File) {
+        formDataToSend.append(key, value);
+      } else {
+        formDataToSend.append(key, String(value));
+      }
+    });
+
+    console.log(formDataToSend)
+
+    // setIsAddProductOpen(false)
+    // resetForm()
   }
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, files } = e.target as HTMLInputElement;
+
+    if (name === 'image' && files) {
+      setFormData({ ...formData, [name]: files[0] });
+    } else if (name === 'outlet_ids') {
+      setFormData({ ...formData, [name]: value.split(',').map(Number) });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
 
   const handleEditClick = (product: any) => {
     setSelectedProduct(product)
     setNewProduct({
       name: product.name,
+      sku: product.sku,
       category: product.category,
       price: product.price.toString(),
       cost: product.cost.toString(),
@@ -206,26 +164,6 @@ export default function ProductsContent() {
   const handleEditProduct = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedProduct) return
-
-    const updatedProducts = products.map((product) => {
-      if (product.id === selectedProduct.id) {
-        return {
-          ...product,
-          name: newProduct.name,
-          category: newProduct.category,
-          price: Number.parseInt(newProduct.price),
-          cost: Number.parseInt(newProduct.cost),
-          stock: Number.parseInt(newProduct.stock),
-          minStock: Number.parseInt(newProduct.minStock),
-          description: newProduct.description,
-          isActive: newProduct.isActive,
-          outlet: newProduct.outlet,
-        }
-      }
-      return product
-    })
-
-    setProducts(updatedProducts)
     setIsEditProductOpen(false)
     resetForm()
   }
@@ -236,17 +174,23 @@ export default function ProductsContent() {
   }
 
   const handleDeleteProduct = () => {
-    if (!selectedProduct) return
 
-    const updatedProducts = products.filter((product) => product.id !== selectedProduct.id)
-    setProducts(updatedProducts)
-    setIsDeleteDialogOpen(false)
-    setSelectedProduct(null)
   }
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Buat URL sementara untuk preview gambar
+      setPreviewImage(URL.createObjectURL(file));
+    } else {
+      setPreviewImage(null);
+    }
+  };
 
   const resetForm = () => {
     setNewProduct({
       name: "",
+      sku: "",
       category: "",
       price: "",
       cost: "",
@@ -259,20 +203,6 @@ export default function ProductsContent() {
     setSelectedProduct(null)
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Roti":
-        return <Cake className="h-4 w-4" />
-      case "Donat":
-        return <Coffee className="h-4 w-4" />
-      case "Kue":
-        return <Cake className="h-4 w-4" />
-      case "Pastry":
-        return <Pizza className="h-4 w-4" />
-      default:
-        return <Cake className="h-4 w-4" />
-    }
-  }
 
   return (
     <div className="flex flex-col space-y-4">
@@ -300,32 +230,16 @@ export default function ProductsContent() {
                 <DialogTitle>Tambah Produk Baru</DialogTitle>
                 <DialogDescription>Isi detail produk baru di bawah ini. Klik simpan setelah selesai.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleAddProduct}>
-                <div className="grid gap-4 py-4">
+              <form onSubmit={handleAddProduct} encType="multipart/form-data">
+                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nama Produk</Label>
                       <Input id="name" name="name" value={newProduct.name} onChange={handleInputChange} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="category">Kategori</Label>
-                      <Select
-                        value={newProduct.category}
-                        onValueChange={(value) => handleSelectChange("category", value)}
-                      >
-                        <SelectTrigger id="category">
-                          <SelectValue placeholder="Pilih kategori" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories
-                            .filter((c) => c !== "Semua")
-                            .map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="name">SKU</Label>
+                      <Input id="name" name="sku" value={newProduct.sku} onChange={handleInputChange} required />
                     </div>
                   </div>
 
@@ -342,15 +256,23 @@ export default function ProductsContent() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="cost">Harga Modal (Rp)</Label>
-                      <Input
-                        id="cost"
-                        name="cost"
-                        type="number"
-                        value={newProduct.cost}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <Label htmlFor="category">Kategori</Label>
+                      <Select
+                        value={newProduct.category}
+                        onValueChange={(value) => handleSelectChange("category", value)}
+                      >
+                        <SelectTrigger id="category">
+                          <SelectValue placeholder="Pilih kategori" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories?.data
+                            .map((category) => (
+                              <SelectItem key={category.id} value={category.name}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -381,17 +303,14 @@ export default function ProductsContent() {
 
                   <div className="space-y-2">
                     <Label htmlFor="outlet">Outlet</Label>
-                    <Select value={newProduct.outlet} onValueChange={(value) => handleSelectChange("outlet", value)}>
-                      <SelectTrigger id="outlet">
-                        <SelectValue placeholder="Pilih outlet" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Semua Outlet">Semua Outlet</SelectItem>
-                        <SelectItem value="Outlet Pusat">Outlet Pusat</SelectItem>
-                        <SelectItem value="Outlet Cabang Selatan">Outlet Cabang Selatan</SelectItem>
-                        <SelectItem value="Outlet Cabang Timur">Outlet Cabang Timur</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2 flex-col">
+                      {outlets?.data.map((outlet) => (
+                        <div key={outlet.id} className="flex items-center gap-2">
+                          <Checkbox id={outlet.id.toString()} name="outlet_ids[]" value={outlet.id.toString()} onChange={(e) => handleSelectChange("outlet_ids", e.currentTarget.value)} />
+                          <Label htmlFor={outlet.id.toString()}>{outlet.name}</Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -409,11 +328,26 @@ export default function ProductsContent() {
                     <Label htmlFor="image">Gambar Produk</Label>
                     <div className="flex items-center gap-4">
                       <div className="h-20 w-20 rounded-md border bg-muted flex items-center justify-center">
-                        <Cake className="h-10 w-10 text-muted-foreground" />
+                        {previewImage ? (
+                          <img
+                            src={previewImage}
+                            alt="Preview"
+                            className="h-20 w-20 rounded-md object-cover"
+                          />
+                        ) : (
+                          <Cake className="h-10 w-10 text-muted-foreground" />
+                        )}
                       </div>
-                      <Button type="button" variant="outline" className="h-10">
-                        <Upload className="mr-2 h-4 w-4" /> Unggah Gambar
-                      </Button>
+                      <label htmlFor="image">
+                      </label>
+                      <input
+                        type="file"
+                        name="image"
+                        id="image"
+                        className=""
+                        accept="image/*"
+                        onChange={handleImageChange} 
+                      />
                     </div>
                   </div>
 
@@ -448,7 +382,7 @@ export default function ProductsContent() {
         <CardHeader className="pb-3">
           <CardTitle>Daftar Produk</CardTitle>
           <CardDescription>Kelola produk yang tersedia di toko Anda</CardDescription>
-          <Tabs defaultValue="Semua" className="w-full">
+          {/* <Tabs defaultValue="Semua" className="w-full">
             <TabsList className="mb-4 flex h-auto flex-wrap justify-start rounded-none border-b bg-transparent p-0">
               {categories.map((category) => (
                 <TabsTrigger
@@ -461,24 +395,26 @@ export default function ProductsContent() {
                 </TabsTrigger>
               ))}
             </TabsList>
-          </Tabs>
+          </Tabs> */}
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>SKU</TableHead>
                 <TableHead>Produk</TableHead>
                 <TableHead>Kategori</TableHead>
                 <TableHead className="text-right">Harga</TableHead>
                 <TableHead className="text-right">Stok</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Outlet</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((product) => (
+
+              {products?.data.map((product) => (
                 <TableRow key={product.id}>
+                  <TableCell>{product.sku}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-md bg-orange-100 flex items-center justify-center">
@@ -498,33 +434,30 @@ export default function ProductsContent() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {getCategoryIcon(product.category)}
-                      <span>{product.category}</span>
+                      <span>{product.category.name}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="font-medium">Rp {product.price.toLocaleString()}</div>
-                    <div className="text-xs text-muted-foreground">Modal: Rp {product.cost.toLocaleString()}</div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className={`font-medium ${product.stock <= product.minStock ? "text-orange-600" : ""}`}>
-                      {product.stock}
+                    <div className={`font-medium ${product.quantity <= product.min_stock ? "text-orange-600" : ""}`}>
+                      {product.quantity}
                     </div>
-                    <div className="text-xs text-muted-foreground">Min: {product.minStock}</div>
+                    <div className="text-xs text-muted-foreground">Min: {product.min_stock}</div>
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
                       className={
-                        product.isActive
+                        product.is_active
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
                           : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                       }
                     >
-                      {product.isActive ? "Aktif" : "Tidak Aktif"}
+                      {product.is_active ? "Aktif" : "Tidak Aktif"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{product.outlet}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -547,7 +480,7 @@ export default function ProductsContent() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredProducts.length === 0 && (
+              {products?.data.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
                     Tidak ada produk yang ditemukan.
@@ -560,7 +493,7 @@ export default function ProductsContent() {
       </Card>
 
       {/* Edit Product Dialog */}
-      <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+      {/* <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Produk</DialogTitle>
@@ -580,11 +513,11 @@ export default function ProductsContent() {
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories
-                        .filter((c) => c !== "Semua")
+                      {categories?.data
+                        // .filter((c) => c !== "Semua")
                         .map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -701,10 +634,10 @@ export default function ProductsContent() {
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Konfirmasi Hapus</DialogTitle>
@@ -740,7 +673,7 @@ export default function ProductsContent() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   )
 }

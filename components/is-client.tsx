@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
-import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export default function IsClientComponent({
   children,
@@ -9,6 +9,7 @@ export default function IsClientComponent({
   children: ReactNode;
 }) {
   const [isClient, setIsClient] = useState(false);
+  const queryClient = new QueryClient();
 
   useEffect(() => {
     setIsClient(true);
@@ -17,13 +18,9 @@ export default function IsClientComponent({
   if (isClient) {
     return (
       <div>
-        {/* <ProgressBar
-          height="4px"
-          color="rgb(249 115 22)"
-          options={{ showSpinner: false }}
-          shallowRouting
-        /> */}
-        {children}
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
       </div>
     );
   }

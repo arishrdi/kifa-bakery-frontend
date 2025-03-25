@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   description:
     "Sistem manajemen bisnis terintegrasi dengan dashboard, POS, dan manajemen stok",
   icons: {
-    icon: '/favicon.ico'
-  }
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -20,17 +20,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const queryClient = new QueryClient();
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <IsClientComponent>{children}</IsClientComponent>
-        </ThemeProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <IsClientComponent>
+              <AuthProvider>
+                {children}
+              </AuthProvider>
+            </IsClientComponent>
+          </ThemeProvider>
       </body>
     </html>
   );
@@ -38,3 +43,5 @@ export default function RootLayout({
 
 import "./globals.css";
 import IsClientComponent from "@/components/is-client";
+import { AuthProvider } from "@/contexts/auth-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

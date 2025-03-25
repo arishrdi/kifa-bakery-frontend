@@ -15,6 +15,12 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'kifa-bakery-backend.test',
+      },
+    ],
   },
   experimental: {
     webpackBuildWorker: true,

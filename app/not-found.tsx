@@ -17,7 +17,6 @@ export default function NotFound() {
               Maaf, halaman yang Anda cari tidak dapat ditemukan
             </p>
           </div>
-
           <Button asChild className="gap-2">
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />

@@ -31,51 +31,53 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { createCategory, getAllCategories } from "@/services/category-service"
+import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 
 // Sample categories data
-const initialCategories = [
-  {
-    id: 1,
-    name: "Roti",
-    description: "Berbagai jenis roti dan pastry",
-    productCount: 15,
-    isActive: true,
-    icon: "Cake",
-    color: "#FDA4AF",
-  },
-  {
-    id: 2,
-    name: "Donat",
-    description: "Donat dengan berbagai topping",
-    productCount: 8,
-    isActive: true,
-    icon: "Coffee",
-    color: "#FCD34D",
-  },
-  {
-    id: 3,
-    name: "Kue",
-    description: "Kue tradisional dan modern",
-    productCount: 25,
-    isActive: true,
-    icon: "Cake",
-    color: "#86EFAC",
-  },
-  {
-    id: 4,
-    name: "Pastry",
-    description: "Pastry dan kue kering",
-    productCount: 12,
-    isActive: true,
-    icon: "Pizza",
-    color: "#93C5FD",
-  },
-]
+// const initialCategories = [
+//   {
+//     id: 1,
+//     name: "Roti",
+//     description: "Berbagai jenis roti dan pastry",
+//     productCount: 15,
+//     isActive: true,
+//     icon: "Cake",
+//     color: "#FDA4AF",
+//   },
+//   {
+//     id: 2,
+//     name: "Donat",
+//     description: "Donat dengan berbagai topping",
+//     productCount: 8,
+//     isActive: true,
+//     icon: "Coffee",
+//     color: "#FCD34D",
+//   },
+//   {
+//     id: 3,
+//     name: "Kue",
+//     description: "Kue tradisional dan modern",
+//     productCount: 25,
+//     isActive: true,
+//     icon: "Cake",
+//     color: "#86EFAC",
+//   },
+//   {
+//     id: 4,
+//     name: "Pastry",
+//     description: "Pastry dan kue kering",
+//     productCount: 12,
+//     isActive: true,
+//     icon: "Pizza",
+//     color: "#93C5FD",
+//   },
+// ]
 
 export default function CategoriesContent() {
   const { currentOutlet } = useOutlet()
   const [searchQuery, setSearchQuery] = useState("")
-  const [categories, setCategories] = useState(initialCategories)
+  // const [categories, setCategories] = useState(initialCategories)
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -83,13 +85,15 @@ export default function CategoriesContent() {
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
-    icon: "Cake",
-    color: "#FDA4AF",
-    isActive: true,
   })
 
+  const { invalidate } = useInvalidateQueries();
+
+  const { data: categories, isLoading } = getAllCategories()
+  const postCategory = createCategory()
+
   // Filter categories based on search query
-  const filteredCategories = categories.filter((category) => {
+  const filteredCategories = categories?.data.filter((category) => {
     return (
       category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       category.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -101,36 +105,45 @@ export default function CategoriesContent() {
     setNewCategory((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSwitchChange = (checked: boolean) => {
-    setNewCategory((prev) => ({ ...prev, isActive: checked }))
-  }
+  // const handleSwitchChange = (checked: boolean) => {
+  //   setNewCategory((prev) => ({ ...prev, isActive: checked }))
+  // }
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault()
-    const categoryToAdd = {
-      id: categories.length + 1,
+
+    postCategory.mutate({
       name: newCategory.name,
       description: newCategory.description,
-      productCount: 0,
-      isActive: newCategory.isActive,
-      icon: newCategory.icon,
-      color: newCategory.color,
-    }
+    }, {
+      onSuccess: () => {
+        invalidate(['categories'])
+        setIsAddCategoryOpen(false)
+        resetForm()
+      }
+    })
 
-    setCategories([...categories, categoryToAdd])
+    // const categoryToAdd = {
+    //   id: categories.length + 1,
+    //   name: newCategory.name,
+    //   description: newCategory.description,
+    //   productCount: 0,
+    // }
+
+    // setCategories([...categories, categoryToAdd])
     setIsAddCategoryOpen(false)
     resetForm()
   }
 
   const handleEditClick = (category: any) => {
     setSelectedCategory(category)
-    setNewCategory({
-      name: category.name,
-      description: category.description,
-      icon: category.icon,
-      color: category.color,
-      isActive: category.isActive,
-    })
+    // setNewCategory({
+    //   name: category.name,
+    //   description: category.description,
+    //   icon: category.icon,
+    //   color: category.color,
+    //   isActive: category.isActive,
+    // })
     setIsEditCategoryOpen(true)
   }
 
@@ -138,21 +151,21 @@ export default function CategoriesContent() {
     e.preventDefault()
     if (!selectedCategory) return
 
-    const updatedCategories = categories.map((category) => {
-      if (category.id === selectedCategory.id) {
-        return {
-          ...category,
-          name: newCategory.name,
-          description: newCategory.description,
-          icon: newCategory.icon,
-          color: newCategory.color,
-          isActive: newCategory.isActive,
-        }
-      }
-      return category
-    })
+    // const updatedCategories = categories.map((category) => {
+    //   if (category.id === selectedCategory.id) {
+    //     return {
+    //       ...category,
+    //       name: newCategory.name,
+    //       description: newCategory.description,
+    //       icon: newCategory.icon,
+    //       color: newCategory.color,
+    //       isActive: newCategory.isActive,
+    //     }
+    //   }
+    //   return category
+    // })
 
-    setCategories(updatedCategories)
+    // setCategories(updatedCategories)
     setIsEditCategoryOpen(false)
     resetForm()
   }
@@ -165,8 +178,8 @@ export default function CategoriesContent() {
   const handleDeleteCategory = () => {
     if (!selectedCategory) return
 
-    const updatedCategories = categories.filter((category) => category.id !== selectedCategory.id)
-    setCategories(updatedCategories)
+    // const updatedCategories = categories.filter((category) => category.id !== selectedCategory.id)
+    // setCategories(updatedCategories)
     setIsDeleteDialogOpen(false)
     setSelectedCategory(null)
   }
@@ -175,9 +188,6 @@ export default function CategoriesContent() {
     setNewCategory({
       name: "",
       description: "",
-      icon: "Cake",
-      color: "#FDA4AF",
-      isActive: true,
     })
     setSelectedCategory(null)
   }
@@ -242,7 +252,7 @@ export default function CategoriesContent() {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label htmlFor="icon">Ikon</Label>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -278,9 +288,9 @@ export default function CategoriesContent() {
                         <Tag className="h-5 w-5" />
                       </Button>
                     </div>
-                  </div>
+                  </div> */}
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label htmlFor="color">Warna</Label>
                     <div className="flex items-center gap-2">
                       <Input
@@ -299,12 +309,12 @@ export default function CategoriesContent() {
                       </div>
                       <span className="text-sm">Pratinjau</span>
                     </div>
-                  </div>
+                  </div> */}
 
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <Switch id="isActive" checked={newCategory.isActive} onCheckedChange={handleSwitchChange} />
                     <Label htmlFor="isActive">Kategori Aktif</Label>
-                  </div>
+                  </div> */}
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
@@ -340,38 +350,18 @@ export default function CategoriesContent() {
                 <TableHead>Kategori</TableHead>
                 <TableHead>Deskripsi</TableHead>
                 <TableHead className="text-center">Jumlah Produk</TableHead>
-                <TableHead>Status</TableHead>
+                {/* <TableHead>Status</TableHead> */}
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCategories.map((category) => (
+              {categories && categories.data.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-10 w-10 rounded-md flex items-center justify-center"
-                        style={{ backgroundColor: category.color }}
-                      >
-                        {getCategoryIcon(category.icon)}
-                      </div>
                       <div className="font-medium">{category.name}</div>
-                    </div>
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate">{category.description}</TableCell>
-                  <TableCell className="text-center">{category.productCount}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        category.isActive
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                      }
-                    >
-                      {category.isActive ? "Aktif" : "Tidak Aktif"}
-                    </Badge>
-                  </TableCell>
+                  <TableCell className="text-center">{category.products_count}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -389,7 +379,7 @@ export default function CategoriesContent() {
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteClick(category)}
-                          disabled={category.productCount > 0}
+                          disabled={category.products_count > 0}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Hapus
                         </DropdownMenuItem>
@@ -398,7 +388,7 @@ export default function CategoriesContent() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredCategories.length === 0 && (
+              {filteredCategories && filteredCategories.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
                     Tidak ada kategori yang ditemukan.
@@ -433,70 +423,6 @@ export default function CategoriesContent() {
                   onChange={handleInputChange}
                   rows={2}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-icon">Ikon</Label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant={newCategory.icon === "Cake" ? "default" : "outline"}
-                    className={`h-10 ${newCategory.icon === "Cake" ? "bg-orange-500 hover:bg-orange-600" : ""}`}
-                    onClick={() => setNewCategory((prev) => ({ ...prev, icon: "Cake" }))}
-                  >
-                    <Cake className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={newCategory.icon === "Coffee" ? "default" : "outline"}
-                    className={`h-10 ${newCategory.icon === "Coffee" ? "bg-orange-500 hover:bg-orange-600" : ""}`}
-                    onClick={() => setNewCategory((prev) => ({ ...prev, icon: "Coffee" }))}
-                  >
-                    <Coffee className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={newCategory.icon === "Pizza" ? "default" : "outline"}
-                    className={`h-10 ${newCategory.icon === "Pizza" ? "bg-orange-500 hover:bg-orange-600" : ""}`}
-                    onClick={() => setNewCategory((prev) => ({ ...prev, icon: "Pizza" }))}
-                  >
-                    <Pizza className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={newCategory.icon === "Tag" ? "default" : "outline"}
-                    className={`h-10 ${newCategory.icon === "Tag" ? "bg-orange-500 hover:bg-orange-600" : ""}`}
-                    onClick={() => setNewCategory((prev) => ({ ...prev, icon: "Tag" }))}
-                  >
-                    <Tag className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-color">Warna</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    id="edit-color"
-                    name="color"
-                    value={newCategory.color}
-                    onChange={handleInputChange}
-                    className="h-10 w-20 p-1"
-                  />
-                  <div
-                    className="w-10 h-10 rounded-md border flex items-center justify-center"
-                    style={{ backgroundColor: newCategory.color }}
-                  >
-                    {getCategoryIcon(newCategory.icon)}
-                  </div>
-                  <span className="text-sm">Pratinjau</span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch id="edit-isActive" checked={newCategory.isActive} onCheckedChange={handleSwitchChange} />
-                <Label htmlFor="edit-isActive">Kategori Aktif</Label>
               </div>
             </div>
             <DialogFooter>

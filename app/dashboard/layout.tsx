@@ -19,12 +19,6 @@ export default function DashboardLayout({
 }) {
   return (
     <OutletProvider>
-      {/* <ProgressBar
-          height="4px"
-          color="rgb(249 115 22)"
-          options={{ showSpinner: false }}
-          shallowRouting
-        /> */}
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
           <SidebarNav />
@@ -37,7 +31,7 @@ export default function DashboardLayout({
                   <UserNav />
                 </div>
               </header>
-              <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 w-full">
+              <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 w-full bg-primary-foreground dark:bg-gray-900">
                 {children}
               </div>
             </div>

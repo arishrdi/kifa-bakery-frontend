@@ -167,7 +167,7 @@ export default function OutletsPage() {
                   <TableHead>Nama Outlet</TableHead>
                   <TableHead>Alamat</TableHead>
                   <TableHead>Telepon</TableHead>
-                  <TableHead>Manager</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -178,17 +178,17 @@ export default function OutletsPage() {
                     <TableCell className="font-medium">{outlet.name}</TableCell>
                     <TableCell>{outlet.address}</TableCell>
                     <TableCell>{outlet.phone}</TableCell>
-                    <TableCell>{outlet.manager}</TableCell>
+                    <TableCell>{outlet.email}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
                         className={
-                          outlet.isActive
+                          outlet.is_active
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
                             : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                         }
                       >
-                        {outlet.isActive ? "Aktif" : "Tidak Aktif"}
+                        {outlet.is_active ? "Aktif" : "Tidak Aktif"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -234,7 +234,7 @@ export default function OutletsPage() {
                       </div>
                       <div className="flex items-center text-muted-foreground">
                         <User className="h-4 w-4 mr-2" />
-                        {outlet.manager}
+                        {outlet.email}
                       </div>
                     </div>
                   </div>

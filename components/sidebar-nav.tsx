@@ -40,6 +40,7 @@ import {
 import { OutletSwitcher } from "./outlet-switcher"
 import { useState } from "react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import Image from "next/image"
 
 const navItems = [
   {
@@ -79,7 +80,7 @@ const navItems = [
       { name: "Stok Realtime", href: "/dashboard/stock?tab=realtime", icon: Package },
       { name: "Riwayat Stok", href: "/dashboard/stock?tab=history", icon: History },
       { name: "Stok Per Tanggal", href: "/dashboard/stock?tab=custom", icon: Calendar },
-      { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: ArrowLeftRight },
+      // { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: ArrowLeftRight },
     ],
   },
   {
@@ -132,52 +133,23 @@ export function SidebarNav() {
     }))
   }
 
-  // Check if a path is active (exact match or starts with path for submenus)
   const isActive = (href: string) => {
     const baseHref = href.split("?")[0]
     const basePathname = pathname.split("?")[0]
 
-    // Check if this is the exact path or if it's a parent path
     return basePathname === baseHref || (baseHref !== "/dashboard" && basePathname.startsWith(baseHref))
   }
 
-  // Check if a submenu item is active (includes the tab parameter)
-  // const isSubItemActive = (href: string) => {
-  //   if (href.includes("?")) {
-  //     const [path, query] = href.split("?")
-  //     const basePathname = pathname.split("?")[0]
-
-  //     // If we're on the exact path
-  //     if (path === basePathname) {
-  //       // Check if the URL has the same tab parameter
-  //       const currentParams = new URLSearchParams(searchParams?.toString() || "")
-  //       const hrefParams = new URLSearchParams(query)
-  //       const currentTab = currentParams.get("tab")
-  //       const hrefTab = hrefParams.get("tab")
-
-  //       // If there's no tab in the URL but this is the base path, it's active
-  //       if (!currentTab && path === basePathname) {
-  //         return !hrefTab || hrefTab === "overview"
-  //       }
-
-  //       return currentTab === hrefTab
-  //     }
-  //   }
-  //   return href === pathname
-  // }
 
   const isSubItemActive = (href: string) => {
     const [path, query] = href.split("?")
     const basePathname = pathname.split("?")[0]
     
-    // Pertama pastikan path utama cocok
     if (basePathname !== path) return false
     
-    // Handle kasus untuk dashboard utama
     const currentTab = searchParams?.get("tab")
     const hrefTab = new URLSearchParams(query).get("tab")
   
-    // Jika tidak ada tab di URL, anggap sebagai 'overview'
     if (path === "/dashboard" && !currentTab) {
       return hrefTab === "overview"
     }
@@ -187,16 +159,17 @@ export function SidebarNav() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b p-4">
+      <SidebarHeader className="border-b p-4 ">
         <div className="flex items-center">
-          <BarChart3 className="h-6 w-6 mr-2" />
+          {/* <BarChart3 className="h-6 w-6 mr-2" /> */}
+          <Image src="/logo-kifa.png" alt="Logo kifa" width={200} height={200} className="w-12 mr-4" />
           <h1 className="text-xl font-bold">Kifa Bakery</h1>
         </div>
         <div className="mt-4">
           <OutletSwitcher />
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-4">
+      <SidebarContent className="p-4 ">
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
