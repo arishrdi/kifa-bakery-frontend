@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,8 @@ import { getAllProductsByOutlet } from "@/services/product-service"
 import { useAuth } from "@/contexts/auth-context"
 import Image from "next/image"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { getCashBalanceByOutlet } from "@/services/cash-transaction-service"
+import { Product } from "@/types/product"
 
 export default function POSPage() {
   const [cart, setCart] = useState<Array<{ id: number; name: string; price: number; quantity: number }>>([])
@@ -25,52 +27,126 @@ export default function POSPage() {
   const [activeCategory, setActiveCategory] = useState("Semua")
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [localProducts, setLocalProducts] = useState<Product[]>([])
+
 
   const { user, logout } = useAuth()
 
-  // if (!user) {
-  //   return
-  // }
+  const outletId = Number(user?.outlet_id) || 1
 
-  // const outletId = 
+  const queryCashBalance = getCashBalanceByOutlet(outletId)
+  const { data: cashBalance } = queryCashBalance()
+
+  const query = getAllProductsByOutlet(outletId)
+  const { data: products, isLoading, refetch: refetchProducts } = query()
+
+  useEffect(() => {
+    if (products?.data) {
+      setLocalProducts(products.data)
+    }
+  }, [products])
+
 
   const { data: categories } = getAllCategories()
-  const query = getAllProductsByOutlet(Number(user?.outlet_id))
-  const { data: products, isLoading, refetch: refetchProducts } = query()
-  // Add product to cart
-  const addToCart = (product: { id: number; name: string; price: number; quantity: number }) => {
-    const existingItem = cart.find((item) => item.id === product.id)
 
+  console.log({ cashBalance, outletId })
+
+  // const addToCart = (product: { id: number; name: string; price: number; quantity: number }) => {
+  //   const existingItem = cart.find((item) => item.id === product.id)
+
+  //   if (existingItem) {
+  //     setCart(cart.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)))
+  //   } else {
+  //     setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1 }])
+  //   }
+  // }
+
+  const addToCart = (product: {
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+  }) => {
+    // Cek stok tersedia
+    const currentProduct = localProducts.find(p => p.id === product.id);
+    if (!currentProduct || currentProduct.quantity < 1) return;
+  
+    // Update keranjang
+    const existingItem = cart.find((item) => item.id === product.id);
     if (existingItem) {
-      setCart(cart.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)))
+      setCart(cart.map((item) =>
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+      ));
     } else {
-      setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1 }])
+      setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1 }]);
     }
+  
+    // Update stok lokal
+    setLocalProducts(prev =>
+      prev.map(p =>
+        p.id === product.id ? { ...p, quantity: p.quantity - 1 } : p
+      )
+    );
+  };
 
-    console.log(cart)
-  }
+  // const removeFromCart = (id: number) => {
+  //   setCart(cart.filter((item) => item.id !== id))
+  // }
 
-  // Remove item from cart
   const removeFromCart = (id: number) => {
-    setCart(cart.filter((item) => item.id !== id))
-  }
+    const item = cart.find(item => item.id === id);
+    if (!item) return;
+  
+    // Kembalikan stok
+    setLocalProducts(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, quantity: p.quantity + item.quantity } : p
+      )
+    );
+  
+    setCart(cart.filter((item) => item.id !== id));
+  };
+  
 
-  // Update item quantity
+  // const updateQuantity = (id: number, quantity: number) => {
+  //   if (quantity < 1) return
+
+  //   setCart(cart.map((item) => (item.id === id ? { ...item, quantity } : item)))
+  // }
+
   const updateQuantity = (id: number, quantity: number) => {
-    if (quantity < 1) return
-
-    setCart(cart.map((item) => (item.id === id ? { ...item, quantity } : item)))
-  }
+    if (quantity < 1) return;
+  
+    // Hitung perubahan kuantitas
+    const item = cart.find(item => item.id === id);
+    if (!item) return;
+  
+    const quantityChange = quantity - item.quantity;
+    const currentProduct = localProducts.find(p => p.id === id);
+  
+    // Validasi stok
+    if (currentProduct && (currentProduct.quantity - quantityChange) < 0) return;
+  
+    // Update keranjang
+    setCart(cart.map((item) => 
+      item.id === id ? { ...item, quantity } : item
+    ));
+  
+    // Update stok lokal
+    if (currentProduct) {
+      setLocalProducts(prev =>
+        prev.map(p =>
+          p.id === id ? { ...p, quantity: p.quantity - quantityChange } : p
+        )
+      );
+    }
+  };  
 
   // Calculate subtotal
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   // Calculate tax (11%)
-  // const tax = subtotal * 0.11
   const tax = subtotal ? subtotal * 0.11 : 0;
-  console.log({tax})
-
-  // Calculate total
   const total = subtotal + tax
 
   return (
@@ -86,7 +162,7 @@ export default function POSPage() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
 
-            <CashRegister />
+            <CashRegister outletId={outletId} cashBalance={Number(cashBalance?.data.balance) || 0} />
             <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
               <Clock className="mr-2 h-4 w-4" />
               <span className="hidden lg:inline">Shift:</span> {user?.last_shift.start_time} - {user?.last_shift.end_time}
@@ -122,7 +198,7 @@ export default function POSPage() {
                   <div className="p-2 rounded-md bg-orange-50">
                     <div className="flex items-center mb-1">
                       <User className="h-4 w-4 text-orange-500 mr-2" />
-                      <span className="font-medium">Dinda (Kasir)</span>
+                      <span className="font-medium">{user?.name} ({user?.role})</span>
                     </div>
                     <Badge className="bg-orange-100 text-orange-800 w-full justify-start mt-1">
                       <Clock className="mr-2 h-3 w-3" />
@@ -131,7 +207,7 @@ export default function POSPage() {
                   </div>
 
                   <div className="p-2">
-                    <CashRegister />
+                    <CashRegister outletId={outletId} cashBalance={Number(cashBalance?.data.balance) || 0} />
                   </div>
 
                   <Separator />
@@ -197,7 +273,7 @@ export default function POSPage() {
                 <EmptyProduct />
               ) : (
                 <ProductGrid
-                  products={products?.data}
+                  products={localProducts}
                   searchQuery={searchQuery}
                   activeCategory={activeCategory}
                   addToCart={addToCart}

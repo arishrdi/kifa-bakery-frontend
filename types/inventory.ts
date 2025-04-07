@@ -1,24 +1,46 @@
+import { User } from "./auth";
 import { Outlet } from "./outlet";
 import { Product } from "./product";
 import { StatusMessage } from "./response";
 
-export interface Datum {
-  product:          Product;
-  outlet:           Outlet | null;
-  total_stok_akhir: number;
-  inventories:      Inventory[];
+export interface InventoryInput {
+  outlet_id: number;
+  product_id: number;
+  quantity_change: number;
+  type: "purchase" | "sale" | "adjustment";
+  notes: string;
 }
 
 export interface Inventory {
-  id:          number;
-  tanggal:     Date;
-  stok_awal:   number;
-  stok_masuk:  number;
-  stok_keluar: number;
-  stok_akhir:  number;
-  keterangan:  string;
+  outlet_id: number;
+  product_id: number;
+  quantity_before: number;
+  quantity_after: number;
+  quantity_change: number;
+  type: "purchase" | "sale" | "adjustment";
+  notes: string;
+  user_id: number;
+  updated_at: string;
+  created_at: string;
+  id: number;
 }
 
-export interface InventoryAllResponse extends StatusMessage {
-  data: Datum[];
+export interface InventoryHistoryByOutletResponse extends StatusMessage {
+  data: InventoryWithRelations[];
+}
+
+type InventoryWithRelations = Inventory & {
+  outlet: Outlet;
+  product: Product;
+  user: User;
+};
+
+
+
+export interface InventoryResponse extends StatusMessage {
+  data: Inventory;
+}
+
+export interface InventoryAllHistoryResponse extends StatusMessage {
+  data: Inventory[];
 }

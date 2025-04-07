@@ -10,6 +10,7 @@ export interface ProductInput {
   is_active: boolean;
   outlet_ids: number[];
   quantity: number;
+  min_stock: number;
 }
 
 export interface ProductResponse extends StatusMessage {
@@ -31,6 +32,11 @@ export interface Product {
   category: Category; // Objek kategori
   min_stock: number;
   quantity: number;
+  image_url?: string;
+  outlets: {
+    id: number;
+    name: string;
+  }[];
 }
 
 interface Category {

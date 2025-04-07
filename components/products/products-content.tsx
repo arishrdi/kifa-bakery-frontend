@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { ChangeEvent, useState } from "react"
 import { useOutlet } from "@/contexts/outlet-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,35 +9,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Search, Plus, Edit, Trash2, Store, Cake, Coffee, Pizza, Upload, MoreHorizontal } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Store, Cake, MoreHorizontal } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useSearchParams } from "next/navigation"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { getAllProductsByOutlet } from "@/services/product-service"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { getAllProductsByOutlet, createProduct } from "@/services/product-service"
 import { getAllCategories } from "@/services/category-service"
 import { getAllOutlets } from "@/services/outlet-service"
 import { Checkbox } from "../ui/checkbox"
-import { ProductInput } from "@/types/product"
+import { Product, ProductInput } from "@/types/product"
+import { createInventoryHistory } from "@/services/inventory-service"
+import { InventoryInput } from "@/types/inventory"
 
 export default function ProductsContent() {
   const { currentOutlet } = useOutlet()
@@ -46,168 +31,231 @@ export default function ProductsContent() {
   const tab = searchParams.get("tab") || "list"
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeCategory, setActiveCategory] = useState("Semua")
-  // const [products, setProducts] = useState(productsData)
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
-  const [isEditProductOpen, setIsEditProductOpen] = useState(false)
+  const [isAdjustStockDialogOpen, setIsAdjustStockDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    sku: "",
-    category: "",
-    price: "",
-    cost: "",
-    stock: "",
-    minStock: "",
-    description: "",
-    isActive: true,
-    outlet: "Semua Outlet",
-  })
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false)
 
-  const [formData, setFormData] = useState({
+  const postProduct = createProduct()
+  const postInventoryHistory = createInventoryHistory()
+
+  const initialFormData: ProductInput = {
     name: '',
     sku: '',
     description: '',
-    price: 0,
-    category_id: '',
+    price: '',
+    category_id: 0,
     image: null,
-    is_active: false,
+    is_active: true,
     outlet_ids: [],
-    quantity: 0,
-    min_stock: 0,
-  });
+    quantity: '',
+    min_stock: '',
+  }
+
+  const initialInventoryFormData: InventoryInput = {
+    outlet_id: currentOutlet?.id || 0,
+    product_id: 0,
+    quantity_change: '',
+    type: "adjustment",
+    notes: ""
+  }
+
+  const [formData, setFormData] = useState<ProductInput>(initialFormData)
+  const [inventoryFormData, setInventoryFormData] = useState<InventoryInput>(initialInventoryFormData)
 
   const query = getAllProductsByOutlet(currentOutlet?.id || 0)
-  const { data: products, isLoading, refetch: refetchProducts } = query()
+  const { data: products, refetch: refetchProducts } = query()
   const { data: categories } = getAllCategories()
   const { data: outlets } = getAllOutlets()
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setNewProduct((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleNumericInput = (name: any, value: string) => {
+    const cleanedValue = value.replace(/[^-0-9]/g, '');
 
-  const handleSelectChange = (name: string, value: string) => {
-    setNewProduct((prev) => ({ ...prev, [name]: value }))
-  }
+    if (cleanedValue === '-' || cleanedValue === '') {
+      return '';
+    }
 
-  const handleSwitchChange = (checked: boolean) => {
-    setNewProduct((prev) => ({ ...prev, isActive: checked }))
-  }
+    const processedValue = cleanedValue.startsWith('-')
+      ? '-' + cleanedValue.replace(/-/g, '')
+      : cleanedValue;
 
-  const handleAddProduct = (e: React.FormEvent) => {
-    e.preventDefault()
-    // const productToAdd = {
-    //   // id: products.length + 1,
-    //   name: newProduct.name,
-    //   sku: newProduct.sku,
-    //   category: newProduct.category,
-    //   price: Number.parseInt(newProduct.price),
-    //   // cost: Number.parseInt(newProduct.cost),
-    //   stock: Number.parseInt(newProduct.stock),
-    //   minStock: Number.parseInt(newProduct.minStock),
-    //   description: newProduct.description,
-    //   isActive: newProduct.isActive,
-    //   image: newProduct.image,
-    //   outlet: newProduct.outlet,
-    // }
+    return parseInt(processedValue, 10).toString();
+  };
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
 
-    const formDataToSend = new FormData();
-    Object.keys(formData).forEach((key) => {
-      const value = formData[key as keyof ProductInput];
-      if (key === 'outlet_ids') {
-        formDataToSend.append(key, JSON.stringify(value));
-      } else if (key === 'image' && value instanceof File) {
-        formDataToSend.append(key, value);
-      } else {
-        formDataToSend.append(key, String(value));
-      }
-    });
+    if (name === 'price' || name === 'quantity' || name === 'min_stock' || name === 'quantity_change') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: handleNumericInput(name, value)
+      }));
 
-    console.log(formDataToSend)
-
-    // setIsAddProductOpen(false)
-    // resetForm()
-  }
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, files } = e.target as HTMLInputElement;
-
-    if (name === 'image' && files) {
-      setFormData({ ...formData, [name]: files[0] });
-    } else if (name === 'outlet_ids') {
-      setFormData({ ...formData, [name]: value.split(',').map(Number) });
+      setInventoryFormData(prev => ({
+        ...prev,
+        [name]: handleNumericInput(name, value)
+      }));
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+
+      setInventoryFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
-  const handleEditClick = (product: any) => {
-    setSelectedProduct(product)
-    setNewProduct({
-      name: product.name,
-      sku: product.sku,
-      category: product.category,
-      price: product.price.toString(),
-      cost: product.cost.toString(),
-      stock: product.stock.toString(),
-      minStock: product.minStock.toString(),
-      description: product.description,
-      isActive: product.isActive,
-      outlet: product.outlet,
+  const handleCheckboxChange = (outletId: number) => {
+    setFormData(prev => {
+      const outletIds = prev.outlet_ids.includes(outletId)
+        ? prev.outlet_ids.filter(id => id !== outletId)
+        : [...prev.outlet_ids, outletId]
+      return { ...prev, outlet_ids: outletIds }
     })
-    setIsEditProductOpen(true)
   }
 
-  const handleEditProduct = (e: React.FormEvent) => {
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPreviewImage(URL.createObjectURL(file))
+      setFormData(prev => ({ ...prev, image: file }))
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedProduct) return
-    setIsEditProductOpen(false)
-    resetForm()
+
+    const formDataToSend = new FormData()
+    formDataToSend.append('name', formData.name)
+    formDataToSend.append('sku', formData.sku)
+    formDataToSend.append('image', formData.image)
+    formDataToSend.append('description', formData.description)
+    formDataToSend.append('price', formData.price.toString())
+    formDataToSend.append('category_id', formData.category_id.toString())
+    formDataToSend.append('is_active', formData.is_active ? '1' : '0');
+    formDataToSend.append('quantity', formData.quantity.toString())
+    formDataToSend.append('min_stock', formData.min_stock.toString())
+    formData.outlet_ids.forEach((id) => {
+      formDataToSend.append('outlet_ids[]', id.toString());
+    });
+
+    try {
+      postProduct.mutate(formDataToSend, {
+        onSuccess: () => {
+          setIsAddProductOpen(false)
+          setFormData(initialFormData)
+          setPreviewImage(null)
+          refetchProducts()
+        }
+      })
+      console.log('FormData:', Object.fromEntries(formDataToSend))
+
+    } catch (error: any) {
+      console.error('Error creating product:', error.message)
+    }
   }
 
-  const handleDeleteClick = (product: any) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const handleEditSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('_method', 'PUT'); // Untuk Laravel API
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('sku', formData.sku);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('category_id', formData.category_id.toString());
+      formDataToSend.append('is_active', formData.is_active ? '1' : '0');
+      formDataToSend.append('quantity', formData.quantity);
+      formDataToSend.append('min_stock', formData.min_stock);
+
+      // Handle image update
+      if (formData.image) {
+        formDataToSend.append('image', formData.image);
+      }
+
+      formData.outlet_ids.forEach((id) => {
+        formDataToSend.append('outlet_ids[]', id.toString());
+      });
+
+      // try {
+      //   updateProductMutation.mutate(
+      //     { id: selectedProduct.id, data: formDataToSend },
+      //     {
+      //       onSuccess: () => {
+      //         setIsEditProductOpen(false);
+      //         setFormData(initialFormData);
+      //         setPreviewImage(null);
+      //         refetchProducts();
+      //       }
+      //     }
+      //   );
+      // } catch (error: any) {
+      //   console.error('Error updating product:', error.message);
+      // }
+    };
+    console.log("edit", selectedProduct)
+  }
+
+  const handleEditClick = (product: Product) => {
+    setSelectedProduct(product);
+    setFormData({
+      name: product.name,
+      sku: product.sku || '',
+      description: product.description || '',
+      price: product.price.toString(),
+      category_id: product.category.id,
+      image: null, // Tetap null karena kita akan handle file terpisah
+      is_active: product.is_active,
+      outlet_ids: product.outlets.map(outlet => outlet.id),
+      quantity: product.quantity.toString(),
+      min_stock: product.min_stock.toString()
+    });
+    setPreviewImage(product.image || null);
+    setIsEditProductOpen(true);
+  };
+
+  const handleAdjustStockSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    postInventoryHistory.mutate(
+      {
+        outlet_id: currentOutlet?.id || 0,
+        product_id: selectedProduct.id,
+        quantity_change: inventoryFormData.quantity_change,
+        type: inventoryFormData.type,
+        notes: inventoryFormData.notes
+      },
+      {
+        onSuccess: () => {
+          setIsAdjustStockDialogOpen(false)
+          refetchProducts()
+        }
+      }
+    )
+
+    console.log("adjust stock", selectedProduct)
+  }
+
+  const handleDeleteClick = (product: Product) => {
     setSelectedProduct(product)
     setIsDeleteDialogOpen(true)
   }
 
-  const handleDeleteProduct = () => {
-
+  const handleAdjustStockClick = (product: Product) => {
+    setSelectedProduct(product)
+    setIsAdjustStockDialogOpen(true)
   }
-
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Buat URL sementara untuk preview gambar
-      setPreviewImage(URL.createObjectURL(file));
-    } else {
-      setPreviewImage(null);
-    }
-  };
-
-  const resetForm = () => {
-    setNewProduct({
-      name: "",
-      sku: "",
-      category: "",
-      price: "",
-      cost: "",
-      stock: "",
-      minStock: "",
-      description: "",
-      isActive: true,
-      outlet: "Semua Outlet",
-    })
-    setSelectedProduct(null)
-  }
-
 
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Manajemen Produk</h2>
+        <h2 className="text-3xl font-bold tracking-tight">{isEditProductOpen ? "Edit Produk" : "Manajemen Produk"}</h2>
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -219,149 +267,333 @@ export default function ProductsContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
+
+          <Dialog
+            open={isAddProductOpen || isEditProductOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                // Reset form saat dialog ditutup
+                setFormData(initialFormData)
+                setPreviewImage(null)
+              }
+              if (isEditProductOpen) {
+                setIsEditProductOpen(open)
+              } else {
+                setIsAddProductOpen(open)
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="bg-orange-500 hover:bg-orange-600">
-                <Plus className="mr-2 h-4 w-4" /> Tambah Produk
+                <Plus className="mr-2 h-4 w-4" /> {isEditProductOpen ? "Edit Produk" : "Tambah Produk"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="max-w-[800px]">
               <DialogHeader>
-                <DialogTitle>Tambah Produk Baru</DialogTitle>
-                <DialogDescription>Isi detail produk baru di bawah ini. Klik simpan setelah selesai.</DialogDescription>
+                <DialogTitle className="text-xl font-semibold">{isEditProductOpen ? "Edit Produk" : "Tambah Produk Baru"}</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  {isEditProductOpen ? "Edit informasi produk" : "Lengkapi informasi produk baru untuk menambahkannya ke katalog"}
+                </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleAddProduct} encType="multipart/form-data">
-                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nama Produk</Label>
-                      <Input id="name" name="name" value={newProduct.name} onChange={handleInputChange} required />
+
+              <form onSubmit={isEditProductOpen ? handleEditSubmit : handleSubmit} encType="multipart/form-data">
+                <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto">
+                  {/* Section 1: Informasi Dasar */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Informasi Dasar</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label >Nama Produk</Label>
+                        <Input
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          placeholder="Contoh: Es Kopi Susu"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>SKU Produk</Label>
+                        <Input
+                          name="sku"
+                          value={formData.sku}
+                          onChange={handleInputChange}
+                          placeholder="Kode unik produk (opsional)"
+                        />
+                      </div>
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="name">SKU</Label>
-                      <Input id="name" name="sku" value={newProduct.sku} onChange={handleInputChange} required />
+                      <Label>Deskripsi Produk</Label>
+                      <Textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        rows={3}
+                        placeholder="Deskripsi singkat tentang produk..."
+                        className="resize-none"
+                      />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Harga Jual (Rp)</Label>
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        value={newProduct.price}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Kategori</Label>
-                      <Select
-                        value={newProduct.category}
-                        onValueChange={(value) => handleSelectChange("category", value)}
-                      >
-                        <SelectTrigger id="category">
-                          <SelectValue placeholder="Pilih kategori" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories?.data
-                            .map((category) => (
-                              <SelectItem key={category.id} value={category.name}>
-                                {category.name}
+                  {/* Section 2: Harga & Kategori */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Harga & Kategori</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Harga Jual</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">Rp</span>
+                          <Input
+                            name="price"
+                            type="text"
+                            value={formData.price}
+                            onChange={handleInputChange}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Kategori</Label>
+                        <Select
+                          value={formData.category_id.toString()}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: parseInt(value) }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih kategori" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.data.map((category) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm">{category.name}</span>
+                                </div>
                               </SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="stock">Stok</Label>
-                      <Input
-                        id="stock"
-                        name="stock"
-                        type="number"
-                        value={newProduct.stock}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="minStock">Stok Minimum</Label>
-                      <Input
-                        id="minStock"
-                        name="minStock"
-                        type="number"
-                        value={newProduct.minStock}
-                        onChange={handleInputChange}
-                        required
-                      />
+                  {/* Section 3: Manajemen Stok */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Manajemen Stok</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Stok Awal</Label>
+                        <Input
+                          name="quantity"
+                          type="text"
+                          value={formData.quantity}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label >Stok Minimum</Label>
+                        <Input
+                          name="min_stock"
+                          type="text"
+                          value={formData.min_stock}
+                          onChange={handleInputChange}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="outlet">Outlet</Label>
-                    <div className="flex gap-2 flex-col">
+                  {/* Section 4: Distribusi Outlet */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Distribusi Outlet</h3>
+                    <div className="grid grid-cols-2 gap-4 max-h-[200px] overflow-y-auto">
                       {outlets?.data.map((outlet) => (
-                        <div key={outlet.id} className="flex items-center gap-2">
-                          <Checkbox id={outlet.id.toString()} name="outlet_ids[]" value={outlet.id.toString()} onChange={(e) => handleSelectChange("outlet_ids", e.currentTarget.value)} />
-                          <Label htmlFor={outlet.id.toString()}>{outlet.name}</Label>
+                        <div key={outlet.id} className="flex items-center gap-3">
+                          <Checkbox
+                            checked={formData.outlet_ids.includes(outlet.id)}
+                            onCheckedChange={() => handleCheckboxChange(outlet.id)}
+                          />
+
+                          <Label htmlFor={`outlet-${outlet.id}`} className="flex-1">
+                            <div className="font-medium">{outlet.name}</div>
+                            <div className="text-xs text-muted-foreground">{outlet.address}</div>
+                          </Label>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Deskripsi</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      value={newProduct.description}
-                      onChange={handleInputChange}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="image">Gambar Produk</Label>
-                    <div className="flex items-center gap-4">
-                      <div className="h-20 w-20 rounded-md border bg-muted flex items-center justify-center">
-                        {previewImage ? (
-                          <img
-                            src={previewImage}
-                            alt="Preview"
-                            className="h-20 w-20 rounded-md object-cover"
-                          />
-                        ) : (
-                          <Cake className="h-10 w-10 text-muted-foreground" />
-                        )}
+                  {/* Section 5: Gambar Produk */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Gambar Produk</h3>
+                    <div className="flex items-start gap-6">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="relative h-32 w-32 rounded-lg border-2 border-dashed bg-background">
+                          {isEditProductOpen ? (
+                            previewImage ? (
+                              <img
+                                src={previewImage}
+                                alt="Preview"
+                                className="h-full w-full rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center">
+                                <Cake className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <Cake className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground text-center">
+                          Format: JPEG/PNG
+                          <br />
+                          Maks. 2MB
+                        </span>
                       </div>
-                      <label htmlFor="image">
-                      </label>
-                      <input
-                        type="file"
-                        name="image"
-                        id="image"
-                        className=""
-                        accept="image/*"
-                        onChange={handleImageChange} 
-                      />
+
+                      <div className="flex-1 space-y-3">
+                        <div className="space-y-2">
+                          <Label>Upload Gambar</Label>
+                          <Input
+                            type="file"
+                            id="image"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="file:text-foreground file:bg-transparent file:border-0"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            id="is_active"
+                            checked={formData.is_active}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                          />
+                          <Label htmlFor="is_active" className="flex flex-col gap-1">
+                            <span>Status Aktif</span>
+                            <span className="text-xs text-muted-foreground font-normal">
+                              Produk akan muncul di katalog jika diaktifkan
+                            </span>
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="border-t pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddProductOpen(false)
+                      setIsEditProductOpen(false)
+                    }}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="gap-2 bg-orange-600 hover:bg-orange-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {isEditProductOpen ? "Simpan Perubahan" : "Tambah Produk"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAdjustStockDialogOpen} onOpenChange={setIsAdjustStockDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sesuaikan Stok</DialogTitle>
+                <DialogDescription>
+                  Sesuaikan stok produk untuk outlet yang dipilih
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAdjustStockSubmit}>
+                <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto">
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Informasi Produk</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nama Produk</Label>
+                        <Input
+                          type="text"
+                          value={selectedProduct?.name}
+
+                          disabled
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Stok Saat Ini</Label>
+                        <Input
+                          type="number"
+                          value={selectedProduct?.quantity}
+                          disabled
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Penyesuaian Stok</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nilai + / -</Label>
+                        <Input
+                          type="number"
+                          name="quantity_change"
+                          value={inventoryFormData.quantity_change}
+                          onChange={handleInputChange}
+                          placeholder="Masukkan nilai penambahan/pengurangan"
+                          onKeyPress={(e) => {
+                            // Izinkan tanda minus hanya di awal atau untuk bilangan negatif
+                            if (e.key === '-' && e.currentTarget.value.includes('-')) {
+                              e.preventDefault();
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tipe</Label>
+                        <Select
+                          value={inventoryFormData.type}
+                          onValueChange={(value) => setInventoryFormData(prev => ({ ...prev, type: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih tipe" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sale">Penjualan</SelectItem>
+                            <SelectItem value="purchase">Pembelian</SelectItem>
+                            <SelectItem value="adjustment">Penyesuaian</SelectItem>
+                            <SelectItem value="other">Lainnya</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Keterangan</Label>
+                        <Textarea
+                          name="notes"
+                          value={inventoryFormData.notes}
+                          onChange={handleInputChange}
+                          placeholder="Masukkan keterangan (opsional)"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch id="isActive" checked={newProduct.isActive} onCheckedChange={handleSwitchChange} />
-                    <Label htmlFor="isActive">Produk Aktif</Label>
-                  </div>
                 </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddProductOpen(false)}>
+                <DialogFooter className="border-t pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAdjustStockDialogOpen(false)}
+                  >
                     Batal
                   </Button>
-                  <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                    Simpan
+                  <Button type="submit" className="gap-2 bg-orange-600 hover:bg-orange-700">
+                    <Plus className="h-4 w-4" />
+                    Sesuaikan Stok
                   </Button>
                 </DialogFooter>
               </form>
@@ -377,26 +609,7 @@ export default function ProductsContent() {
           <AlertDescription>Data produk yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
         </Alert>
       )}
-
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Daftar Produk</CardTitle>
-          <CardDescription>Kelola produk yang tersedia di toko Anda</CardDescription>
-          {/* <Tabs defaultValue="Semua" className="w-full">
-            <TabsList className="mb-4 flex h-auto flex-wrap justify-start rounded-none border-b bg-transparent p-0">
-              {categories.map((category) => (
-                <TabsTrigger
-                  key={category}
-                  value={category}
-                  onClick={() => setActiveCategory(category)}
-                  className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2 data-[state=active]:border-orange-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                >
-                  {category}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs> */}
-        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -468,8 +681,12 @@ export default function ProductsContent() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleEditClick(product)}>
+                        <DropdownMenuItem onClick={() => { handleEditClick(product); setIsEditProductOpen(true) }}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-orange-500" onClick={() => handleAdjustStockClick(product)}>
+                          <Plus className="mr-2 h-4 w-4" /> Sesuaikan Stok
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(product)}>
@@ -491,190 +708,7 @@ export default function ProductsContent() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Edit Product Dialog */}
-      {/* <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Produk</DialogTitle>
-            <DialogDescription>Ubah detail produk di bawah ini. Klik simpan setelah selesai.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditProduct}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nama Produk</Label>
-                  <Input id="edit-name" name="name" value={newProduct.name} onChange={handleInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-category">Kategori</Label>
-                  <Select value={newProduct.category} onValueChange={(value) => handleSelectChange("category", value)}>
-                    <SelectTrigger id="edit-category">
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.data
-                        // .filter((c) => c !== "Semua")
-                        .map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-price">Harga Jual (Rp)</Label>
-                  <Input
-                    id="edit-price"
-                    name="price"
-                    type="number"
-                    value={newProduct.price}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-cost">Harga Modal (Rp)</Label>
-                  <Input
-                    id="edit-cost"
-                    name="cost"
-                    type="number"
-                    value={newProduct.cost}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-stock">Stok</Label>
-                  <Input
-                    id="edit-stock"
-                    name="stock"
-                    type="number"
-                    value={newProduct.stock}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-minStock">Stok Minimum</Label>
-                  <Input
-                    id="edit-minStock"
-                    name="minStock"
-                    type="number"
-                    value={newProduct.minStock}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-outlet">Outlet</Label>
-                <Select value={newProduct.outlet} onValueChange={(value) => handleSelectChange("outlet", value)}>
-                  <SelectTrigger id="edit-outlet">
-                    <SelectValue placeholder="Pilih outlet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Semua Outlet">Semua Outlet</SelectItem>
-                    <SelectItem value="Outlet Pusat">Outlet Pusat</SelectItem>
-                    <SelectItem value="Outlet Cabang Selatan">Outlet Cabang Selatan</SelectItem>
-                    <SelectItem value="Outlet Cabang Timur">Outlet Cabang Timur</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Deskripsi</Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  value={newProduct.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-image">Gambar Produk</Label>
-                <div className="flex items-center gap-4">
-                  <div className="h-20 w-20 rounded-md border bg-muted flex items-center justify-center">
-                    {selectedProduct && (
-                      <img
-                        src={selectedProduct.image || "/placeholder.svg"}
-                        alt={selectedProduct.name}
-                        className="h-20 w-20 rounded-md object-cover"
-                      />
-                    )}
-                  </div>
-                  <Button type="button" variant="outline" className="h-10">
-                    <Upload className="mr-2 h-4 w-4" /> Ganti Gambar
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch id="edit-isActive" checked={newProduct.isActive} onCheckedChange={handleSwitchChange} />
-                <Label htmlFor="edit-isActive">Produk Aktif</Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditProductOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                Simpan Perubahan
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog> */}
-
-      {/* Delete Confirmation Dialog */}
-      {/* <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Hapus</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {selectedProduct && (
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-md bg-orange-100 flex items-center justify-center">
-                  <img
-                    src={selectedProduct.image || "/placeholder.svg"}
-                    alt={selectedProduct.name}
-                    className="h-12 w-12 rounded-md object-cover"
-                  />
-                </div>
-                <div>
-                  <div className="font-medium">{selectedProduct.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {selectedProduct.category} • Rp {selectedProduct.price.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteProduct}>
-              Hapus Produk
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
     </div>
+
   )
 }
-

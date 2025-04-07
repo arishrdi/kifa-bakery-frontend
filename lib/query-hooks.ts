@@ -19,14 +19,35 @@ export function createQueryHook<TResponse, TError = unknown>(
 }
 
 // For POST/PUT/DELETE
+// export function createMutationHook<TVariables, TResponse, TError = unknown>(
+//   endpoint: string,
+//   method: 'post' | 'put' | 'delete' = 'post'
+// ) {
+//   return (options?: UseMutationOptions<TResponse, TError, TVariables>) => {
+//     return useMutation<TResponse, TError, TVariables>({
+//       mutationFn: async (variables) => {
+//         const { data } = await apiClient[method]<TResponse>(endpoint, variables);
+//         return data;
+//       },
+//       ...options,
+//     });
+//   };
+// }
+
+
 export function createMutationHook<TVariables, TResponse, TError = unknown>(
-  endpoint: string,
+  endpoint: string | ((variables: TVariables) => string), // Terima string atau fungsi
   method: 'post' | 'put' | 'delete' = 'post'
 ) {
   return (options?: UseMutationOptions<TResponse, TError, TVariables>) => {
     return useMutation<TResponse, TError, TVariables>({
       mutationFn: async (variables) => {
-        const { data } = await apiClient[method]<TResponse>(endpoint, variables);
+        // Jika endpoint adalah fungsi, panggil dengan variables
+        const url = typeof endpoint === 'function' 
+          ? endpoint(variables) 
+          : endpoint;
+          
+        const { data } = await apiClient[method]<TResponse>(url, variables);
         return data;
       },
       ...options,

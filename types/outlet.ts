@@ -14,6 +14,8 @@ export interface Outlet {
   address: string;
   phone: string;
   email: string;
+  tax: number;
+  qris: string;
   is_active: boolean;
   created_at: null;
   updated_at: null;

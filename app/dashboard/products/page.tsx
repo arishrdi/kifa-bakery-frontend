@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useSearchParams } from "next/navigation"
+// import ProductsContent from "@/components/products/products-content"
 import ProductsContent from "@/components/products/products-content"
 import CategoriesContent from "@/components/products/categories-content"
 

@@ -18,13 +18,21 @@ import { Separator } from "@/components/ui/separator"
 import { Banknote, ChevronsUpDown, Plus, Minus } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { getCashBalanceByOutlet, addCashTransaction, subtractCashTransaction } from "@/services/cash-transaction-service"
+import { useAuth } from "@/contexts/auth-context"
+import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 
-export function CashRegister() {
+export function CashRegister({ outletId, cashBalance }: { outletId: number, cashBalance: number }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [cashAmount, setCashAmount] = useState(1500000) // Initial cash amount: Rp 1.500.000
   const [operationType, setOperationType] = useState<"add" | "remove">("add")
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
+
+
+
+  // if (!user) {
+  //   return null
+  // }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numeric input
@@ -32,13 +40,24 @@ export function CashRegister() {
     setAmount(value)
   }
 
+  // const query = getCashBalanceByOutlet(outletId)
+  // const { data: cashBalance } = query()
+
+  const { mutate: addCash, isPending: isAddingCash } = addCashTransaction()
+  const { mutate: subtractCash, isPending: isSubtractingCash } = subtractCashTransaction()
+
+  const { invalidate } = useInvalidateQueries()
   const handleSubmit = () => {
     const amountValue = Number.parseInt(amount) || 0
 
     if (operationType === "add") {
-      setCashAmount(cashAmount + amountValue)
+      addCash({ amount: amountValue, outlet_id: outletId, reason: note }, {onSuccess:() => {
+        invalidate(['cash-register', `${outletId}`])
+      }})
     } else {
-      setCashAmount(Math.max(0, cashAmount - amountValue))
+      subtractCash({ amount: amountValue, outlet_id: outletId, reason: note }, {onSuccess:() => {
+        invalidate(['cash-register', `${outletId}`])
+      }})
     }
 
     // Reset form
@@ -53,7 +72,7 @@ export function CashRegister() {
         <PopoverTrigger asChild>
           <Button variant="outline" className="border-orange-200 bg-orange-50 hover:bg-orange-100">
             <Banknote className="mr-2 h-4 w-4 text-orange-500" />
-            <span className="font-medium">Rp {cashAmount.toLocaleString()}</span>
+            <span className="font-medium">Rp {Number(cashBalance).toLocaleString()}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 text-orange-500 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -61,8 +80,8 @@ export function CashRegister() {
           <div className="space-y-4">
             <div className="flex flex-col space-y-1">
               <h4 className="font-medium text-sm">Kas Kasir</h4>
-              <p className="text-2xl font-bold text-orange-600">Rp {cashAmount.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Terakhir diperbarui: {new Date().toLocaleTimeString()}</p>
+              <p className="text-2xl font-bold text-orange-600">Rp {Number(cashBalance).toLocaleString()}</p>
+              {/* <p className="text-xs text-muted-foreground">Terakhir diperbarui: {new Date(cashBalance?.data.updated_at || new Date()).toLocaleTimeString()}</p> */}
             </div>
             <Separator />
             <div className="flex justify-between">
@@ -116,7 +135,7 @@ export function CashRegister() {
               />
             </div>
 
-            {operationType === "remove" && (
+            {/* {operationType === "remove" && (
               <div className="grid gap-2">
                 <Label htmlFor="reason">Alasan Pengambilan</Label>
                 <RadioGroup defaultValue="shift-change" className="grid grid-cols-2 gap-2">
@@ -146,7 +165,7 @@ export function CashRegister() {
                   </div>
                 </RadioGroup>
               </div>
-            )}
+            )} */}
 
             <div className="grid gap-2">
               <Label htmlFor="note">Catatan</Label>

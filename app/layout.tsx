@@ -3,6 +3,8 @@ import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import IsClientComponent from "@/components/is-client";
+import { AuthProvider } from "@/contexts/auth-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +22,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const queryClient = new QueryClient();
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={inter.className}>
@@ -41,7 +42,3 @@ export default function RootLayout({
   );
 }
 
-import "./globals.css";
-import IsClientComponent from "@/components/is-client";
-import { AuthProvider } from "@/contexts/auth-context";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

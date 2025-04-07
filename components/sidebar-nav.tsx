@@ -68,7 +68,7 @@ const navItems = [
     icon: Store,
     subItems: [
       { name: "Daftar Outlet", href: "/dashboard/outlets?tab=list", icon: ClipboardList },
-      { name: "Peta Outlet", href: "/dashboard/outlets?tab=map", icon: Map },
+      // { name: "Peta Outlet", href: "/dashboard/outlets?tab=map", icon: Map },
       { name: "Performa Outlet", href: "/dashboard/outlets?tab=performance", icon: BarChart },
     ],
   },
@@ -77,6 +77,7 @@ const navItems = [
     href: "/dashboard/stock",
     icon: Package,
     subItems: [
+      // { name: "Atur Stok", href: "/dashboard/stock?tab=adjustment", icon: Package },
       { name: "Stok Realtime", href: "/dashboard/stock?tab=realtime", icon: Package },
       { name: "Riwayat Stok", href: "/dashboard/stock?tab=history", icon: History },
       { name: "Stok Per Tanggal", href: "/dashboard/stock?tab=custom", icon: Calendar },
@@ -85,17 +86,17 @@ const navItems = [
   },
   {
     name: "POS",
-    href: "/dashboard/pos",
+    href: "/pos",
     icon: CreditCard,
     subItems: [],
   },
   {
-    name: "Shift",
-    href: "/dashboard/shifts",
-    icon: Clock,
+    name: "Staff",
+    href: "/dashboard/staff",
+    icon: Users,
     subItems: [
-      { name: "Jadwal Shift", href: "/dashboard/shifts?tab=shifts", icon: Clock },
-      { name: "Staff", href: "/dashboard/shifts?tab=staff", icon: Users },
+      { name: "Staff", href: "/dashboard/staff?tab=staff", icon: Users },
+      { name: "Jadwal Shift", href: "/dashboard/staff?tab=shifts", icon: Clock },
     ],
   },
   {

@@ -61,7 +61,11 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
       })),
     }, {
       onSuccess: () => {
-        invalidate(['products-outlet', 'orders-history'])
+        // invalidate(['products-outlet', 'orders-history', 'cash-register'])
+        invalidate(['products-outlet', `${user.outlet_id}`])
+        invalidate(['orders-history', `${user.outlet_id}`])
+        invalidate(['cash-register', `${user.outlet_id}`])
+
         setCompleted(true)
         setTimeout(() => {
           onSuccess()
@@ -73,21 +77,6 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
         }, 1500)
       }
     })
-    // console.log({ paymentMethod, cart, amountPaid, total, tax })
-
-    // if (orderData?.data) {
-    //   setCompleted(true)
-    //   setTimeout(() => {
-
-    //     invalidate(['products-outlet', `${user.outlet_id}`])
-    //     onSuccess()
-    //     setCompleted(false)
-    //     setPaymentMethod("tunai")
-    //     setAmountPaid("")
-    //     setCardNumber("")
-    //     onOpenChange(false)
-    //   }, 1500)
-    // }
 
   }
 

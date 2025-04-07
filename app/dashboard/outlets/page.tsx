@@ -1,68 +1,102 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
-import { useOutlet, type Outlet } from "@/contexts/outlet-context"
+import { useState, ChangeEvent } from "react"
+import { useOutlet } from "@/contexts/outlet-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Plus, Search, Edit, MapPin, Phone, User } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Search, Plus, Edit, Trash2, MapPin, Phone, User, MoreHorizontal } from "lucide-react"
 import { useSearchParams } from "next/navigation"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { OutletInput } from "@/types/outlet"
+import { createOutlet, getAllOutlets } from "@/services/outlet-service"
 
 export default function OutletsPage() {
-  const { outlets } = useOutlet()
+  // const { outlets, currentOutlet } = useOutlet()
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "list"
 
+  const { data: outlets, isLoading: isLoadingOutlets, refetch: refetchOutlets } = getAllOutlets()
+  const { mutate: createOutletMutate, isPending: isCreatingOutlet } = createOutlet()
+
   const [searchQuery, setSearchQuery] = useState("")
-  const [isAddOutletOpen, setIsAddOutletOpen] = useState(false)
-  const [newOutlet, setNewOutlet] = useState<Partial<Outlet>>({
-    name: "",
-    address: "",
-    phone: "",
-    manager: "",
-    isActive: true,
-  })
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [previewQris, setPreviewQris] = useState<string | null>(null)
+  const [editingOutlet, setEditingOutlet] = useState<any>(null)
 
-  // Filter outlets based on search query
-  const filteredOutlets = outlets.filter(
-    (outlet) =>
-      outlet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      outlet.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      outlet.manager.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const initialFormData: OutletInput = {
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    tax: '',
+    qris: null,
+    is_active: true,
+  }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [formData, setFormData] = useState(initialFormData)
+
+  
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setNewOutlet((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPreviewQris(URL.createObjectURL(file))
+      setFormData(prev => ({ ...prev, qris: file }))
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would call an API to save the new outlet
-    console.log("New outlet:", newOutlet)
-    setIsAddOutletOpen(false)
-    setNewOutlet({
-      name: "",
-      address: "",
-      phone: "",
-      manager: "",
-      isActive: true,
+    // Handle form submission logic here
+    console.log('Form data:', formData)
+    const formDataToSend = new FormData()
+    formDataToSend.append('name', formData.name)
+    formDataToSend.append('address', formData.address)
+    formDataToSend.append('phone', formData.phone)
+    formDataToSend.append('email', formData.email)
+    formDataToSend.append('tax', formData.tax.toString())
+    formDataToSend.append('qris', formData.qris)
+    createOutletMutate(formDataToSend, {
+      onSuccess: () => {
+        setIsDialogOpen(false)
+        setFormData(initialFormData)
+        setPreviewQris(null)
+        refetchOutlets()
+      }
     })
+    // setIsDialogOpen(false)
+    // setFormData(initialFormData)
+    // setPreviewQris(null)
   }
+
+  const handleEditClick = (outlet: any) => {
+    setEditingOutlet(outlet)
+    setIsDialogOpen(true)
+  }
+
+  const handleDeleteClick = (outlet: any) => {
+    // Handle delete logic here
+    console.log('Delete outlet:', outlet)
+  }
+
+  const filteredOutlets = outlets?.data.filter(outlet =>
+    outlet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    outlet.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    outlet.phone.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <div className="flex flex-col space-y-4">
@@ -79,74 +113,160 @@ export default function OutletsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Dialog open={isAddOutletOpen} onOpenChange={setIsAddOutletOpen}>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="bg-orange-500 hover:bg-orange-600" onClick={() => setEditingOutlet(false)}>
                 <Plus className="mr-2 h-4 w-4" /> Tambah Outlet
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="max-w-[800px]">
               <DialogHeader>
-                <DialogTitle>Tambah Outlet Baru</DialogTitle>
-                <DialogDescription>Isi detail outlet baru di bawah ini. Klik simpan setelah selesai.</DialogDescription>
+                <DialogTitle className="text-xl font-semibold">
+                  {editingOutlet ? 'Edit Outlet' : 'Tambah Outlet Baru'}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  {editingOutlet ? 'Perbarui informasi outlet' : 'Lengkapi informasi outlet baru'}
+                </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Nama Outlet
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={newOutlet.name}
-                      onChange={handleInputChange}
-                      className="col-span-3"
-                      required
-                    />
+
+              <form onSubmit={handleSubmit} encType="multipart/form-data">
+                <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto">
+                  {/* Informasi Dasar */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Informasi Dasar</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nama Outlet</Label>
+                        <Input
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          placeholder="Masukkan nama outlet"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nomor Telepon</Label>
+                        <Input
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="Masukkan nomor telepon"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Alamat Lengkap</Label>
+                      <Input
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="Masukkan alamat lengkap"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="address" className="text-right">
-                      Alamat
-                    </Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      value={newOutlet.address}
-                      onChange={handleInputChange}
-                      className="col-span-3"
-                      required
-                    />
+
+                  {/* Informasi Tambahan */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Informasi Tambahan</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="Masukkan alamat email"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Persentase Pajak (%)</Label>
+                        <Input
+                          name="tax"
+                          type="number"
+                          value={formData.tax}
+                          onChange={handleInputChange}
+                          placeholder="Masukkan persentase pajak"
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="phone" className="text-right">
-                      Telepon
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={newOutlet.phone}
-                      onChange={handleInputChange}
-                      className="col-span-3"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="manager" className="text-right">
-                      Manager
-                    </Label>
-                    <Input
-                      id="manager"
-                      name="manager"
-                      value={newOutlet.manager}
-                      onChange={handleInputChange}
-                      className="col-span-3"
-                      required
-                    />
+
+                  {/* QRIS Upload */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">QRIS</h3>
+                    <div className="flex items-start gap-6">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="relative h-32 w-32 rounded-lg border-2 border-dashed bg-background">
+                          {previewQris ? (
+                            <img
+                              src={previewQris}
+                              alt="Preview QRIS"
+                              className="h-full w-full rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <MapPin className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground text-center">
+                          Format: JPEG/PNG
+                          <br />
+                          Maks. 10MB
+                        </span>
+                      </div>
+
+                      <div className="flex-1 space-y-3">
+                        <div className="space-y-2">
+                          <Label>Upload QRIS</Label>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            name="qris"
+                            onChange={handleFileChange}
+                            className="file:text-foreground file:bg-transparent file:border-0"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            checked={formData.is_active}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                          />
+                          <Label className="flex flex-col gap-1">
+                            <span>Status Aktif</span>
+                            <span className="text-xs text-muted-foreground font-normal">
+                              Outlet akan muncul di aplikasi jika diaktifkan
+                            </span>
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit">Simpan</Button>
+
+                <DialogFooter className="border-t pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="gap-2 bg-orange-600 hover:bg-orange-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {editingOutlet ? 'Simpan Perubahan' : 'Tambah Outlet'}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -156,91 +276,78 @@ export default function OutletsPage() {
 
       {tab === "list" && (
         <Card>
-          <CardHeader>
-            <CardTitle>Daftar Outlet</CardTitle>
-            <CardDescription>Kelola semua outlet dalam satu tampilan</CardDescription>
-          </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Outlet</TableHead>
-                  <TableHead>Alamat</TableHead>
-                  <TableHead>Telepon</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOutlets.map((outlet) => (
-                  <TableRow key={outlet.id}>
-                    <TableCell className="font-medium">{outlet.name}</TableCell>
-                    <TableCell>{outlet.address}</TableCell>
-                    <TableCell>{outlet.phone}</TableCell>
-                    <TableCell>{outlet.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          outlet.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                        }
-                      >
-                        {outlet.is_active ? "Aktif" : "Tidak Aktif"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {tab === "map" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Peta Outlet</CardTitle>
-            <CardDescription>Visualisasi lokasi outlet pada peta</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="aspect-video w-full rounded-md bg-muted flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-                <p className="mt-2 text-muted-foreground">Peta outlet akan ditampilkan di sini</p>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {outlets.map((outlet) => (
-                <Card key={outlet.id} className="overflow-hidden">
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg">{outlet.name}</h3>
-                    <div className="mt-2 space-y-1 text-sm">
-                      <div className="flex items-center text-muted-foreground">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {outlet.address}
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama Outlet</TableHead>
+                <TableHead>Alamat</TableHead>
+                <TableHead>Kontak</TableHead>
+                <TableHead>Pajak</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOutlets?.map((outlet) => (
+                <TableRow key={outlet.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-md bg-orange-100 flex items-center justify-center">
+                        <MapPin className="h-5 w-5 text-orange-600" />
                       </div>
-                      <div className="flex items-center text-muted-foreground">
-                        <Phone className="h-4 w-4 mr-2" />
-                        {outlet.phone}
-                      </div>
-                      <div className="flex items-center text-muted-foreground">
-                        <User className="h-4 w-4 mr-2" />
-                        {outlet.email}
+                      <div>
+                        <div className="font-medium">{outlet.name}</div>
+                        <div className="text-xs text-muted-foreground">{outlet.email}</div>
                       </div>
                     </div>
-                  </div>
-                </Card>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px] truncate">{outlet.address}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{outlet.phone}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{outlet.tax}%</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        outlet.is_active
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                      }
+                    >
+                      {outlet.is_active ? "Aktif" : "Tidak Aktif"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Buka menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEditClick(outlet)}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(outlet)}>
+                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
+            </TableBody>
+          </Table>
           </CardContent>
         </Card>
       )}
@@ -263,7 +370,7 @@ export default function OutletsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {outlets.map((outlet) => (
+                {outlets?.data.map((outlet) => (
                   <TableRow key={outlet.id}>
                     <TableCell className="font-medium">{outlet.name}</TableCell>
                     <TableCell className="text-right">
@@ -289,4 +396,3 @@ export default function OutletsPage() {
     </div>
   )
 }
-

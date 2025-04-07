@@ -5,6 +5,18 @@ export const getAllCategories = createQueryHook<AllCategoriesResponse>('/categor
 
 export const createCategory = createMutationHook<CategoryInput, CategoryResponse>('/categories', 'post');
 
-export const updateCategory = createMutationHook<CategoryInput, CategoryResponse>('/categories', 'put');
+export const useUpdateCategory = (id: number) => {
+    return createMutationHook<CategoryInput, CategoryResponse>(`/categories/${id}`, "put")();
+  };
 
-export const deleteCategory = createMutationHook<number, void>('/categories', 'delete');
+// export const useDeleteCategory = (id: number) => {
+//     return createMutationHook<void, void>(`/categories/${id}`, 'delete')();
+// };
+
+export const useDeleteCategory = () => {
+    return createMutationHook<number, void, void>(
+      (id) => `/categories/${id}`, // Endpoint dibuat berdasarkan id dari variables
+      'delete'
+    )();
+  };
+

@@ -3,7 +3,7 @@ import { GetProductsResponse, ProductInput, ProductResponse } from "@/types/prod
 
 // export const getAllProductsByOutlet = (id: number) => createQueryHook<GetProductsResponse>(`/products/outlet/${id}`, ['products']);
 export const getAllProductsByOutlet = (id: number) => {
-    return createQueryHook<GetProductsResponse>(`/products/outlet/${id}`, ['products-outlet']);
+    return createQueryHook<GetProductsResponse>(`/products/outlet/${id}`, ['products-outlet', id.toString()]);
 };
 
 export const createProduct = createMutationHook<ProductInput, ProductResponse>('/products', 'post');

@@ -17,54 +17,58 @@ import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSearchParams } from "next/navigation"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialogHeader } from "@/components/ui/alert-dialog"
+import { getInventoryByDate, getRealtimeStock } from "@/services/report-service"
+import { useInventoryHistoryByOutlet } from "@/services/inventory-service"
 
-const stockData = [
-  {
-    id: 1,
-    name: "Produk A",
-    category: "Kategori 1",
-    currentStock: 25,
-    minStock: 10,
-    status: "normal",
-    lastUpdated: "2023-03-20",
-  },
-  {
-    id: 2,
-    name: "Produk B",
-    category: "Kategori 2",
-    currentStock: 8,
-    minStock: 10,
-    status: "low",
-    lastUpdated: "2023-03-20",
-  },
-  {
-    id: 3,
-    name: "Produk C",
-    category: "Kategori 1",
-    currentStock: 0,
-    minStock: 5,
-    status: "out",
-    lastUpdated: "2023-03-19",
-  },
-  {
-    id: 4,
-    name: "Produk D",
-    category: "Kategori 3",
-    currentStock: 42,
-    minStock: 15,
-    status: "normal",
-    lastUpdated: "2023-03-20",
-  },
-  {
-    id: 5,
-    name: "Produk E",
-    category: "Kategori 2",
-    currentStock: 3,
-    minStock: 10,
-    status: "low",
-    lastUpdated: "2023-03-18",
-  },
-]
+// const stockData = [
+//   {
+//     id: 1,
+//     name: "Produk A",
+//     category: "Kategori 1",
+//     currentStock: 25,
+//     minStock: 10,
+//     status: "normal",
+//     lastUpdated: "2023-03-20",
+//   },
+//   {
+//     id: 2,
+//     name: "Produk B",
+//     category: "Kategori 2",
+//     currentStock: 8,
+//     minStock: 10,
+//     status: "low",
+//     lastUpdated: "2023-03-20",
+//   },
+//   {
+//     id: 3,
+//     name: "Produk C",
+//     category: "Kategori 1",
+//     currentStock: 0,
+//     minStock: 5,
+//     status: "out",
+//     lastUpdated: "2023-03-19",
+//   },
+//   {
+//     id: 4,
+//     name: "Produk D",
+//     category: "Kategori 3",
+//     currentStock: 42,
+//     minStock: 15,
+//     status: "normal",
+//     lastUpdated: "2023-03-20",
+//   },
+//   {
+//     id: 5,
+//     name: "Produk E",
+//     category: "Kategori 2",
+//     currentStock: 3,
+//     minStock: 10,
+//     status: "low",
+//     lastUpdated: "2023-03-18",
+//   },
+// ]
 
 const stockHistoryData = [
   {
@@ -130,19 +134,20 @@ export default function StockPage() {
   const tab = searchParams.get("tab") || "realtime"
 
   const [date, setDate] = useState<Date>(new Date())
+  const [dateHistory, setDateHistory] = useState<Date>(new Date())
   const [searchQuery, setSearchQuery] = useState("")
-  const [sourceOutlet, setSourceOutlet] = useState<string>("")
-  const [destinationOutlet, setDestinationOutlet] = useState<string>("")
-  const [selectedProduct, setSelectedProduct] = useState<string>("")
-  const [quantity, setQuantity] = useState<string>("1")
-  const [notes, setNotes] = useState<string>("")
 
-  // Filter stock data based on search query
-  const filteredStockData = stockData.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const formattedDate = date.toLocaleDateString('sv-SE');
+  const formattedDateHistory = dateHistory.toLocaleDateString('sv-SE');
+  // const formattedDate = date.toISOString().split('T')[0];
+
+
+  const queryStock = getRealtimeStock(currentOutlet?.id || 0)
+
+  const { data: stockData } = queryStock()
+
+  const { data: inventoryHistoryData } = useInventoryHistoryByOutlet(currentOutlet?.id || 0, formattedDateHistory)
+  const { data: inventoryByDateData, isLoading: isInventoryByDateLoading } = getInventoryByDate(currentOutlet?.id || 0, formattedDate)
 
   return (
     <div className="flex flex-col space-y-4">
@@ -159,9 +164,6 @@ export default function StockPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Tambah Produk
-          </Button>
         </div>
       </div>
 
@@ -195,14 +197,14 @@ export default function StockPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStockData.map((item) => (
+                {stockData?.data.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell className="text-right">{item.currentStock}</TableCell>
-                    <TableCell className="text-right">{item.minStock}</TableCell>
+                    <TableCell className="font-medium">{item.product.name}</TableCell>
+                    <TableCell>{item.product.category.name}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">{item.min_stock}</TableCell>
                     <TableCell>
-                      {item.status === "normal" && (
+                      {item.quantity >= item.min_stock && (
                         <Badge
                           variant="outline"
                           className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
@@ -210,7 +212,7 @@ export default function StockPage() {
                           Normal
                         </Badge>
                       )}
-                      {item.status === "low" && (
+                      {item.quantity < item.min_stock && (
                         <Badge
                           variant="outline"
                           className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
@@ -218,16 +220,16 @@ export default function StockPage() {
                           Stok Rendah
                         </Badge>
                       )}
-                      {item.status === "out" && (
+                      {item.quantity === 0 && (
                         <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
                           Habis
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{item.lastUpdated}</TableCell>
+                    <TableCell>{format(item.updated_at, "PPP", { locale: id })}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
-                        Edit
+                        Detail
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -247,49 +249,82 @@ export default function StockPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Produk</TableHead>
-                  <TableHead className="text-right">Stok Sebelumnya</TableHead>
-                  <TableHead className="text-right">Stok Baru</TableHead>
-                  <TableHead className="text-right">Perubahan</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Catatan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stockHistoryData.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell className="font-medium">{item.productName}</TableCell>
-                    <TableCell className="text-right">{item.previousStock}</TableCell>
-                    <TableCell className="text-right">{item.newStock}</TableCell>
-                    <TableCell className="text-right">
-                      <span className={item.change > 0 ? "text-green-600" : "text-red-600"}>
-                        {item.change > 0 ? `+${item.change}` : item.change}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {item.type === "addition" ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                        >
-                          Penambahan
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
-                          Pengurangan
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{item.notes}</TableCell>
+            <div className="flex items-center space-x-4">
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="date">Pilih Tanggal</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateHistory}
+                      onSelect={(newDate) => newDate && setDateHistory(newDate)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="pt-4">
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Jam</TableHead>
+                    <TableHead>Produk</TableHead>
+                    <TableHead className="text-right">Stok Sebelumnya</TableHead>
+                    <TableHead className="text-right">Stok Baru</TableHead>
+                    <TableHead className="text-right">Perubahan</TableHead>
+                    <TableHead>Tipe</TableHead>
+                    <TableHead>Catatan</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {inventoryHistoryData?.data.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{format(item.created_at, "HH:mm", { locale: id })}</TableCell>
+                      <TableCell className="font-medium">{item.product.name}</TableCell>
+                      <TableCell className="text-right">{item.quantity_before}</TableCell>
+                      <TableCell className="text-right">{item.quantity_after}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={item.quantity_change > 0 ? "text-green-600" : "text-red-600"}>
+                          {item.quantity_change > 0 ? `+${item.quantity_change}` : item.quantity_change}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {item.type === "purchase" ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                          >
+                            Pembelian
+                          </Badge>
+                        ) : item.type === "sale" ? (
+                          <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+                            Penjualan
+                          </Badge>
+                        ) : item.type === "adjustment" ? (
+                          <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                            Penyesuaian
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100">
+                            Lainnya
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{item.notes}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
           </CardContent>
         </Card>
       )}
@@ -324,7 +359,6 @@ export default function StockPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Button className="mt-auto">Lihat Stok</Button>
               </div>
               <div className="pt-4">
                 <Table>
@@ -337,177 +371,48 @@ export default function StockPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {stockData.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>{item.category}</TableCell>
-                        <TableCell className="text-right">{item.currentStock}</TableCell>
-                        <TableCell>
-                          {item.status === "normal" && (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                            >
-                              Normal
-                            </Badge>
-                          )}
-                          {item.status === "low" && (
-                            <Badge
-                              variant="outline"
-                              className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                            >
-                              Stok Rendah
-                            </Badge>
-                          )}
-                          {item.status === "out" && (
-                            <Badge
-                              variant="outline"
-                              className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                            >
-                              Habis
-                            </Badge>
-                          )}
-                        </TableCell>
+                    {isInventoryByDateLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">Loading...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      inventoryByDateData?.data.inventory_items.map((item) => (
+                        <TableRow key={item.product_id}>
+                          <TableCell className="font-medium">{item.product_name}</TableCell>
+                          <TableCell>{item.category}</TableCell>
+                          <TableCell className="text-right">{item.quantity}</TableCell>
+                          <TableCell>
+                            {item.quantity >= item.min_stock && (
+                              <Badge
+                                variant="outline"
+                                className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                              >
+                                Normal
+                              </Badge>
+                            )}
+                            {item.quantity < item.min_stock && (
+                              <Badge
+                                variant="outline"
+                                className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                              >
+                                Stok Rendah
+                              </Badge>
+                            )}
+                            {item.quantity === 0 && (
+                              <Badge
+                                variant="outline"
+                                className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                              >
+                                Habis
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {tab === "transfer" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Transfer Stok Antar Outlet</CardTitle>
-            <CardDescription>Kelola perpindahan stok antar outlet</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="source-outlet">Outlet Sumber</Label>
-                  <Select value={sourceOutlet} onValueChange={setSourceOutlet}>
-                    <SelectTrigger id="source-outlet">
-                      <SelectValue placeholder="Pilih outlet sumber" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Outlet Pusat</SelectItem>
-                      <SelectItem value="2">Outlet Cabang Selatan</SelectItem>
-                      <SelectItem value="3">Outlet Cabang Timur</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="destination-outlet">Outlet Tujuan</Label>
-                  <Select value={destinationOutlet} onValueChange={setDestinationOutlet}>
-                    <SelectTrigger id="destination-outlet">
-                      <SelectValue placeholder="Pilih outlet tujuan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Outlet Pusat</SelectItem>
-                      <SelectItem value="2">Outlet Cabang Selatan</SelectItem>
-                      <SelectItem value="3">Outlet Cabang Timur</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="product">Produk</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger id="product">
-                    <SelectValue placeholder="Pilih produk" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stockData.map((product) => (
-                      <SelectItem key={product.id} value={product.id.toString()}>
-                        {product.name} - Stok: {product.currentStock}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Jumlah</Label>
-                <Input
-                  type="number"
-                  id="quantity"
-                  min="1"
-                  placeholder="Masukkan jumlah"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Catatan</Label>
-                <Input
-                  id="notes"
-                  placeholder="Catatan transfer (opsional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-
-              <Button className="w-full md:w-auto">Transfer Stok</Button>
-            </div>
-
-            <div className="mt-8">
-              <h3 className="text-lg font-medium mb-4">Riwayat Transfer Stok</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Dari Outlet</TableHead>
-                    <TableHead>Ke Outlet</TableHead>
-                    <TableHead>Produk</TableHead>
-                    <TableHead className="text-right">Jumlah</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>2023-03-20</TableCell>
-                    <TableCell>Outlet Pusat</TableCell>
-                    <TableCell>Outlet Cabang Selatan</TableCell>
-                    <TableCell>Produk A</TableCell>
-                    <TableCell className="text-right">10</TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                        Selesai
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>2023-03-19</TableCell>
-                    <TableCell>Outlet Pusat</TableCell>
-                    <TableCell>Outlet Cabang Timur</TableCell>
-                    <TableCell>Produk B</TableCell>
-                    <TableCell className="text-right">15</TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                        Selesai
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>2023-03-18</TableCell>
-                    <TableCell>Outlet Cabang Selatan</TableCell>
-                    <TableCell>Outlet Cabang Timur</TableCell>
-                    <TableCell>Produk D</TableCell>
-                    <TableCell className="text-right">5</TableCell>
-                    <TableCell>
-                      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-                        Dalam Proses
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
             </div>
           </CardContent>
         </Card>

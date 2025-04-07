@@ -9,12 +9,14 @@ import { ShiftOverview } from "@/components/dashboard/shift-overview"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Store } from "lucide-react"
 import { useSearchParams } from "next/navigation"
+import { getDashboardReport } from "@/services/report-service"
 
 export default function DashboardPage() {
   const { currentOutlet, isLoading } = useOutlet()
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "overview"
   // const tab = searchParams.get("tab") || "overview"
+  const { data: dashboardReport, isLoading: isLoadingDashboardReport } = getDashboardReport(currentOutlet?.id || 0) 
 
   return (
     <div className="flex flex-col">
@@ -47,8 +49,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rp 5.231.000</div>
-              <p className="text-xs text-muted-foreground">+20.1% dari kemarin</p>
+              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.total_sales}</div>
             </CardContent>
           </Card>
           <Card>
@@ -70,13 +71,12 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">+128</div>
-              <p className="text-xs text-muted-foreground">+14% dari kemarin</p>
+              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_orders}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Stok Habis</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Item Terjual</CardTitle>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -92,13 +92,12 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">5 item</div>
-              <p className="text-xs text-muted-foreground">Perlu restock segera</p>
+              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_items} Item</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Shift Aktif</CardTitle>
+              <CardTitle className="text-sm font-medium">Rata-rata penjualan</CardTitle>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -113,8 +112,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Siang</div>
-              <p className="text-xs text-muted-foreground">14:00 - 22:00</p>
+              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.average_order_value}</div>
             </CardContent>
           </Card>
         </div>
@@ -128,7 +126,9 @@ export default function DashboardPage() {
                   {currentOutlet && <CardDescription>Data penjualan untuk {currentOutlet.name}</CardDescription>}
                 </CardHeader>
                 <CardContent className="pl-2">
-                  <Overview />
+                  {dashboardReport?.data.hourly_sales && (
+                    <Overview data={dashboardReport?.data.hourly_sales} />
+                  )}
                 </CardContent>
               </Card>
               <Card className="col-span-3">

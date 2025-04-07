@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import {
   Card,
   CardContent,
@@ -40,6 +40,11 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
+import { getAllOutlets } from "@/services/outlet-service";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { StaffInput } from "@/types/staff";
+import { createStaff, getAllStaffByOutlet } from "@/services/staff-service";
+import { useOutlet } from "@/contexts/outlet-context";
 
 const shiftsData = [
   {
@@ -98,65 +103,181 @@ const staffData = [
 export default function ShiftsPage() {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") || "shifts";
-
+  const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
+  const { currentOutlet } = useOutlet();
+  
   const [date, setDate] = useState<Date>(new Date());
+  const [formData, setFormData] = useState<StaffInput>({
+    email: "",
+    name: "",
+    password: "",
+    role: "",
+    start_time: "",
+    end_time: "",
+  });
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
+  const { data: outlets } = getAllOutlets();
+  const queryStaff = getAllStaffByOutlet(currentOutlet?.id || 1);
+  const { data: staffs, refetch: refetchStaffs } = queryStaff();
+  const { mutate: createStaffMutate, isPending: isCreating } = createStaff()
+
+  const handleCreateStaff = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    createStaffMutate(formData, {
+      onSuccess: () => {
+        setIsAddStaffDialogOpen(false);
+        refetchStaffs();
+        setFormData({
+          email: "",
+          name: "",
+          password: "",
+          role: "",
+          start_time: "",
+          end_time: "",
+        });
+      },
+      onError: (error) => {
+        console.error(error);
+      },
+    });
+  };
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Manajemen Shift</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Manajemen Staff</h2>
         <div className="flex items-center space-x-2">
-          <Dialog>
+          <Dialog open={isAddStaffDialogOpen} onOpenChange={setIsAddStaffDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="mr-2 h-4 w-4" /> Tambah Shift
+                <Plus className="mr-2 h-4 w-4" /> Tambah Staff
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Tambah Shift Baru</DialogTitle>
+                <DialogTitle>Tambah Staff Baru</DialogTitle>
                 <DialogDescription>
-                  Buat shift baru dengan mengisi detail di bawah ini.
+                  Tambahkan staff baru dengan mengisi detail di bawah ini.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
+              <form onSubmit={handleCreateStaff}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
                     Nama
                   </Label>
                   <Input
                     id="name"
-                    placeholder="Nama shift"
+                    name="name"
+                    placeholder="Nama staff"
                     className="col-span-3"
+                    value={formData.name}
+                    onChange={handleInputChange}
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="start-time" className="text-right">
+                  <Label htmlFor="email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    placeholder="Email staff"
+                    className="col-span-3"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="password" className="text-right">
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="text"
+                    placeholder="Password"
+                    className="col-span-3"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="role" className="text-right">
+                    Peran
+                  </Label>
+                  <Select
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Pilih peran" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="kasir">Kasir</SelectItem>
+                      {/* <SelectItem value="supervisor">Supervisor</SelectItem> */}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="start_time" className="text-right">
                     Waktu Mulai
                   </Label>
-                  <Input id="start-time" type="time" className="col-span-3" />
+                  <Input 
+                    id="start_time" 
+                    name="start_time" 
+                    type="time" 
+                    className="col-span-3" 
+                    value={formData.start_time} 
+                    onChange={handleInputChange} 
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="end-time" className="text-right">
+                  <Label htmlFor="end_time" className="text-right">
                     Waktu Selesai
                   </Label>
-                  <Input id="end-time" type="time" className="col-span-3" />
+                  <Input 
+                    id="end_time" 
+                    name="end_time" 
+                    type="time" 
+                    className="col-span-3" 
+                    value={formData.end_time} 
+                    onChange={handleInputChange} 
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="staff" className="text-right">
-                    Staff
+                  <Label htmlFor="outlet" className="text-right">
+                    Outlet
                   </Label>
                   <div className="col-span-3">
-                    <Button variant="outline" className="w-full justify-start">
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Pilih Staff
-                    </Button>
+                    <Select
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, outlet_id: parseInt(value) }))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih outlet" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {outlets?.data.map((outlet) => (
+                          <SelectItem key={outlet.id} value={outlet.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{outlet.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
               <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddStaffDialogOpen(false)}>Batal</Button>
                 <Button type="submit">Simpan</Button>
               </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -283,11 +404,11 @@ export default function ShiftsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {staffData.map((staff) => (
+                {staffs?.data.map((staff) => (
                   <TableRow key={staff.id}>
                     <TableCell className="font-medium">{staff.name}</TableCell>
                     <TableCell>{staff.role}</TableCell>
-                    <TableCell>{staff.shifts.join(", ")}</TableCell>
+                    <TableCell>{staff.last_shift.start_time} - {staff.last_shift.end_time}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
                         Edit

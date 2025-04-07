@@ -153,7 +153,7 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
               <p className="font-medium">Total Transaksi {format(date, "d MMMM yyyy", { locale: id })}</p>
               <p className="text-sm text-muted-foreground">{transactionData?.data.total_orders} transaksi</p>
             </div>
-            <div className="text-xl font-bold text-orange-600">Rp {transactionData?.data.total_revenue.toLocaleString()}</div>
+            <div className="text-xl font-bold text-orange-600">Rp {Number(transactionData?.data.total_revenue).toLocaleString()}</div>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
                       {transaction.payment_method === "cash" ? "Tunai" : "QRIS"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">Rp {transaction.total.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">Rp {Number(transaction.total).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <FileText className="h-4 w-4 text-orange-500" />
