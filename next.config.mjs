@@ -20,6 +20,11 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'kifa-bakery-backend.test',
       },
+      {
+        protocol: 'https',
+        hostname: 'blogger.googleusercontent.com',
+      },
+      
     ],
   },
   experimental: {

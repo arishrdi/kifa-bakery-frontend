@@ -21,7 +21,7 @@ export interface Data {
 
 export interface Orders {
     current_page:   number;
-    data:           Datum[];
+    data:           OrderItem[];
     first_page_url: string;
     from:           number;
     last_page:      number;
@@ -35,12 +35,19 @@ export interface Orders {
     total:          number;
 }
 
-export interface Datum {
+export interface OrderItem {
     id:             number;
     order_number:   string;
     outlet:         string;
     user:           string;
     total:          string;
+
+    subtotal:       string
+    tax:            string
+    discount:       string
+    total_paid:     string
+    change:         string
+
     status:         string;
     payment_method: string;
     created_at:     string;

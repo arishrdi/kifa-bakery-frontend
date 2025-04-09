@@ -8,8 +8,13 @@ export const getAllProductsByOutlet = (id: number) => {
 
 export const createProduct = createMutationHook<ProductInput, ProductResponse>('/products', 'post');
 
-export const updateProduct = createMutationHook<ProductInput, ProductResponse>('/products', 'put');
+export const updateProduct = (id: number) => createMutationHook<ProductInput, ProductResponse>(`/products/${id}`, 'post')();
 
-export const deleteProduct = createMutationHook<number, void>('/products', 'delete');
+// export const deleteProduct  = (id: number) => createMutationHook<number, void>(`/products/${id}`, 'delete');
 
-
+export const deleteProduct = () => {
+    return createMutationHook<number, void, void>(
+      (id) => `/products/${id}`, 
+      'delete'
+    )();
+  };

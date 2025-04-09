@@ -324,8 +324,8 @@ export default function ClosingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center">
             <div>
-              <CardTitle>Riwayat Closing</CardTitle>
-              <CardDescription>Lihat riwayat closing harian</CardDescription>
+              <CardTitle>Riwayat Kas</CardTitle>
+              <CardDescription>Lihat riwayat kas</CardDescription>
             </div>
             <div className="ml-auto">
               <Popover>

@@ -18,6 +18,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { createOrder } from "@/services/order-service"
 import { useAuth } from "@/contexts/auth-context"
 import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
+import Image from "next/image"
+import { PrintInvoice } from "./print-invoice"
 
 interface PaymentModalProps {
   open: boolean
@@ -60,8 +62,7 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
         price: item.price,
       })),
     }, {
-      onSuccess: () => {
-        // invalidate(['products-outlet', 'orders-history', 'cash-register'])
+      onSuccess: (data) => {
         invalidate(['products-outlet', `${user.outlet_id}`])
         invalidate(['orders-history', `${user.outlet_id}`])
         invalidate(['cash-register', `${user.outlet_id}`])
@@ -74,6 +75,8 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
           setAmountPaid("")
           setCardNumber("")
           onOpenChange(false)
+          // PrintInvoice({cashierName: user.name || "Kasir", order=data})
+          PrintInvoice({ cashierName: user.name || "Kasir", order: data.data });
         }, 1500)
       }
     })
@@ -107,7 +110,7 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 px-6">
+            <ScrollArea className="flex-1 px-6 overflow-y-scroll">
               <div className="rounded-md bg-orange-50 p-4 mb-4">
                 <div className="flex items-center justify-between font-medium">
                   <span>Total Pembayaran</span>
@@ -177,10 +180,12 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
               {paymentMethod === "qris" && (
                 <div className="space-y-3">
                   <div className="flex justify-center p-4 bg-muted rounded-md">
-                    <div className="w-48 h-48 bg-white p-2 rounded-md flex items-center justify-center">
-                      <img
-                        src="/placeholder.svg?height=160&width=160"
+                    <div className="w-60 h-60 bg-white p-2 rounded-md flex items-center justify-center">
+                      <Image
+                        src={user?.outlet.qris_url ?? '/placeholder-logo.png'}
                         alt="QRIS Code"
+                        width={700}
+                        height={700}
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -190,7 +195,7 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
                   </div>
                 </div>
               )}
-              <div className="h-4"></div> {/* Add some padding at the bottom */}
+              <div className="h-4"></div>
             </ScrollArea>
 
             <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 mt-4 px-6 py-4 border-t">

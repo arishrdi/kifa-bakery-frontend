@@ -49,7 +49,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.total_sales}</div>
+              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.total_sales || 0}</div>
             </CardContent>
           </Card>
           <Card>
@@ -71,7 +71,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_orders}</div>
+              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_orders || 0}</div>
             </CardContent>
           </Card>
           <Card>
@@ -92,7 +92,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_items} Item</div>
+              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_items || 0} Item</div>
             </CardContent>
           </Card>
           <Card>
@@ -112,7 +112,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.average_order_value}</div>
+              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.average_order_value || 0}</div>
             </CardContent>
           </Card>
         </div>
@@ -128,7 +128,7 @@ export default function DashboardPage() {
                 <CardContent className="pl-2">
                   {dashboardReport?.data.hourly_sales && (
                     <Overview data={dashboardReport?.data.hourly_sales} />
-                  )}
+                  )}  
                 </CardContent>
               </Card>
               <Card className="col-span-3">

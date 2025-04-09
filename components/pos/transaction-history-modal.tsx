@@ -14,60 +14,12 @@ import { cn } from "@/lib/utils"
 import { CalendarIcon, FileText, Search } from "lucide-react"
 import { getHistoryOrders } from "@/services/order-service"
 import { useAuth } from "@/contexts/auth-context"
+import { PrintInvoice } from "./print-invoice"
 
 interface TransactionHistoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
-
-// Sample transaction data
-// const transactionData = [
-//   {
-//     id: "TRX-001",
-//     date: "2023-03-20",
-//     time: "14:35",
-//     cashier: "Dinda",
-//     items: 5,
-//     total: 175000,
-//     paymentMethod: "Tunai",
-//   },
-//   {
-//     id: "TRX-002",
-//     date: "2023-03-20",
-//     time: "15:12",
-//     cashier: "Dinda",
-//     items: 3,
-//     total: 120000,
-//     paymentMethod: "Kartu",
-//   },
-//   {
-//     id: "TRX-003",
-//     date: "2023-03-20",
-//     time: "15:45",
-//     cashier: "Dinda",
-//     items: 7,
-//     total: 230000,
-//     paymentMethod: "Tunai",
-//   },
-//   {
-//     id: "TRX-004",
-//     date: "2023-03-19",
-//     time: "13:22",
-//     cashier: "Budi",
-//     items: 4,
-//     total: 145000,
-//     paymentMethod: "Kartu",
-//   },
-//   {
-//     id: "TRX-005",
-//     date: "2023-03-19",
-//     time: "16:05",
-//     cashier: "Budi",
-//     items: 2,
-//     total: 85000,
-//     paymentMethod: "Tunai",
-//   },
-// ]
 
 export function TransactionHistoryModal({ open, onOpenChange }: TransactionHistoryModalProps) {
   const [date, setDate] = useState<Date>(new Date())
@@ -77,15 +29,8 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
   const orderHistory = getHistoryOrders(user?.outlet_id, format(date, 'yyyy-MM-dd'),format(date, 'yyyy-MM-dd'), 100, 'completed')
 
   const { data: transactionData } = orderHistory()
-  // useEffect(() => {
-  //     refetchOrderHistory({
-  //     outlet_id: user?.outlet_id,
-  //     status: 'completed',
-  //     date_from: format(date, 'yyyy-MM-dd'),
-  //     date_to: format(date, 'yyyy-MM-dd'),
-  //     per_page: 10,
-  //   })
-  // }, [date, refetchOrderHistory])
+  const [showInvoice, setShowInvoice] = useState(false);
+
 
   console.log(transactionData?.data.orders.data)
   // Filter transactions based on date and search query
@@ -97,9 +42,6 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
 
     return matchesDate && (searchQuery === "" || matchesSearch)
   })
-
-  // Calculate daily total
-  const dailyTotal = filteredTransactions?.reduce((sum, transaction) => sum + Number(transaction.total), 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,7 +75,6 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-sm text-muted-foreground">{filteredTransactions?.length} transaksi</p>
           </div>
           <div className="relative w-full sm:w-auto">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -192,8 +133,9 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
                   </TableCell>
                   <TableCell className="text-right">Rp {Number(transaction.total).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => PrintInvoice({ cashierName: user?.name || "Kasir", order: transaction })} >
                       <FileText className="h-4 w-4 text-orange-500" />
+                      {/* {showInvoice && <PrintInvoice cashierName={user?.name || "Kasir"}  order={transaction}/>} */}
                     </Button>
                   </TableCell>
                 </TableRow>

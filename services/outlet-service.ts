@@ -5,6 +5,15 @@ export const getAllOutlets = createQueryHook<AllOutletsResponse>('/outlets', ['o
 
 export const createOutlet = createMutationHook<OutletInput, OutletResponse>('/outlets', 'post');
 
-export const updateOutlet = createMutationHook<OutletInput, OutletResponse>('/outlets', 'put');
+// export const updateOutlet = createMutationHook<OutletInput, OutletResponse>('/outlets', 'put');
 
-export const deleteOutlet = createMutationHook<number, void>('/outlets', 'delete');
+export const updateOutlet = (id: number) => createMutationHook<OutletInput, OutletResponse>(`/outlets/${id}`, 'post')();
+
+// export const deleteOutlet = createMutationHook<number, void>('/outlets', 'delete');
+
+export const deleteOutlet = () => {
+    return createMutationHook<number, void, void>(
+      (id) => `/outlets/${id}`, 
+      'delete'
+    )();
+  };

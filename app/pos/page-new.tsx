@@ -15,51 +15,51 @@ import { ProductGrid } from "@/components/pos/product-grid"
 import { CashRegister } from "@/components/pos/cash-register"
 
 // Sample product data
-const products = [
-  {
-    id: 1,
-    name: "Roti Tawar",
-    price: 15000,
-    category: "Roti",
-    stock: 25,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 2,
-    name: "Donat Coklat",
-    price: 8000,
-    category: "Donat",
-    stock: 18,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  { id: 3, name: "Kue Lapis", price: 25000, category: "Kue", stock: 10, image: "/placeholder.svg?height=80&width=80" },
-  {
-    id: 4,
-    name: "Croissant",
-    price: 18000,
-    category: "Pastry",
-    stock: 12,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  { id: 5, name: "Brownies", price: 20000, category: "Kue", stock: 8, image: "/placeholder.svg?height=80&width=80" },
-  {
-    id: 6,
-    name: "Bolu Pandan",
-    price: 22000,
-    category: "Kue",
-    stock: 15,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  { id: 7, name: "Pie Buah", price: 23000, category: "Pastry", stock: 9, image: "/placeholder.svg?height=80&width=80" },
-  {
-    id: 8,
-    name: "Roti Sobek",
-    price: 17000,
-    category: "Roti",
-    stock: 20,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-]
+// const products = [
+//   {
+//     id: 1,
+//     name: "Roti Tawar",
+//     price: 15000,
+//     category: "Roti",
+//     stock: 25,
+//     image: "/placeholder.svg?height=80&width=80",
+//   },
+//   {
+//     id: 2,
+//     name: "Donat Coklat",
+//     price: 8000,
+//     category: "Donat",
+//     stock: 18,
+//     image: "/placeholder.svg?height=80&width=80",
+//   },
+//   { id: 3, name: "Kue Lapis", price: 25000, category: "Kue", stock: 10, image: "/placeholder.svg?height=80&width=80" },
+//   {
+//     id: 4,
+//     name: "Croissant",
+//     price: 18000,
+//     category: "Pastry",
+//     stock: 12,
+//     image: "/placeholder.svg?height=80&width=80",
+//   },
+//   { id: 5, name: "Brownies", price: 20000, category: "Kue", stock: 8, image: "/placeholder.svg?height=80&width=80" },
+//   {
+//     id: 6,
+//     name: "Bolu Pandan",
+//     price: 22000,
+//     category: "Kue",
+//     stock: 15,
+//     image: "/placeholder.svg?height=80&width=80",
+//   },
+//   { id: 7, name: "Pie Buah", price: 23000, category: "Pastry", stock: 9, image: "/placeholder.svg?height=80&width=80" },
+//   {
+//     id: 8,
+//     name: "Roti Sobek",
+//     price: 17000,
+//     category: "Roti",
+//     stock: 20,
+//     image: "/placeholder.svg?height=80&width=80",
+//   },
+// ]
 
 // Sample categories
 const categories = ["Semua", "Roti", "Donat", "Kue", "Pastry"]
@@ -101,7 +101,7 @@ export default function POSPage() {
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   // Calculate tax (10%)
-  const tax = subtotal * 0.1
+  const tax = subtotal * (user)
 
   // Calculate total
   const total = subtotal + tax
@@ -168,7 +168,7 @@ export default function POSPage() {
                 products={products}
                 searchQuery={searchQuery}
                 activeCategory={activeCategory}
-                addToCa rt={addToCart}
+                addToCart={addToCart}
               />
             </div>
           </ScrollArea>

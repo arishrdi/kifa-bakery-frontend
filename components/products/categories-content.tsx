@@ -161,12 +161,11 @@ export default function CategoriesContent() {
   const handleDeleteCategory = () => {
     if (!selectedCategory) return
 
-    deleteCategory.mutate(selectedCategory.id, {
-      onSuccess: () => {
-        // invalidate(['categories'])
-        refetchCategories()
-      }
-    })
+    // deleteCategory.mutate(selectedCategory.id, {
+    //   onSuccess: () => {
+    //     refetchCategories()
+    //   }
+    // })
 
     deleteCategory.mutate(selectedCategory.id, {
       onSuccess: () => {
@@ -369,7 +368,7 @@ export default function CategoriesContent() {
               <div className="flex items-center gap-3">
                 <div>
                   <div className="font-medium">{selectedCategory.name}</div>
-                  <div className="text-xs text-muted-foreground truncate max-w-[250px]">
+                  <div className="text-xs text-muted-foreground ">
                     {selectedCategory.description}
                   </div>
                 </div>

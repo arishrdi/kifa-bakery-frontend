@@ -17,13 +17,14 @@ import { Search, Plus, Edit, Trash2, Store, Cake, MoreHorizontal } from "lucide-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useSearchParams } from "next/navigation"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { getAllProductsByOutlet, createProduct } from "@/services/product-service"
+import { getAllProductsByOutlet, createProduct, updateProduct, deleteProduct } from "@/services/product-service"
 import { getAllCategories } from "@/services/category-service"
 import { getAllOutlets } from "@/services/outlet-service"
 import { Checkbox } from "../ui/checkbox"
 import { Product, ProductInput } from "@/types/product"
 import { createInventoryHistory } from "@/services/inventory-service"
 import { InventoryInput } from "@/types/inventory"
+import { toast } from "@/hooks/use-toast"
 
 export default function ProductsContent() {
   const { currentOutlet } = useOutlet()
@@ -34,11 +35,13 @@ export default function ProductsContent() {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isAdjustStockDialogOpen, setIsAdjustStockDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [isEditProductOpen, setIsEditProductOpen] = useState(false)
 
   const postProduct = createProduct()
+  const updProduct = updateProduct(selectedProduct?.id ?? 0)
+  const delProduct = deleteProduct()
   const postInventoryHistory = createInventoryHistory()
 
   const initialFormData: ProductInput = {
@@ -143,6 +146,8 @@ export default function ProductsContent() {
       formDataToSend.append('outlet_ids[]', id.toString());
     });
 
+    console.log("create", formDataToSend)
+
     try {
       postProduct.mutate(formDataToSend, {
         onSuccess: () => {
@@ -161,47 +166,49 @@ export default function ProductsContent() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const handleEditSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('_method', 'PUT'); // Untuk Laravel API
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('sku', formData.sku);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('price', formData.price);
-      formDataToSend.append('category_id', formData.category_id.toString());
-      formDataToSend.append('is_active', formData.is_active ? '1' : '0');
-      formDataToSend.append('quantity', formData.quantity);
-      formDataToSend.append('min_stock', formData.min_stock);
+    const formDataToSend = new FormData();
+    formDataToSend.append('name', formData.name);
+    formDataToSend.append('sku', formData.sku);
+    formDataToSend.append('description', formData.description);
+    formDataToSend.append('price', formData.price);
+    formDataToSend.append('category_id', formData.category_id.toString());
+    formDataToSend.append('is_active', formData.is_active ? '1' : '0');
+    formDataToSend.append('quantity', formData.quantity);
+    formDataToSend.append('min_stock', formData.min_stock);
 
-      // Handle image update
-      if (formData.image) {
-        formDataToSend.append('image', formData.image);
-      }
+    // Handle image update
+    if (formData.image) {
+      formDataToSend.append('image', formData.image);
+    }
 
-      formData.outlet_ids.forEach((id) => {
-        formDataToSend.append('outlet_ids[]', id.toString());
-      });
+    formData.outlet_ids.forEach((id) => {
+      formDataToSend.append('outlet_ids[]', id.toString());
+    });
 
-      // try {
-      //   updateProductMutation.mutate(
-      //     { id: selectedProduct.id, data: formDataToSend },
-      //     {
-      //       onSuccess: () => {
-      //         setIsEditProductOpen(false);
-      //         setFormData(initialFormData);
-      //         setPreviewImage(null);
-      //         refetchProducts();
-      //       }
-      //     }
-      //   );
-      // } catch (error: any) {
-      //   console.error('Error updating product:', error.message);
-      // }
-    };
-    console.log("edit", selectedProduct)
-  }
+    console.log("update", formDataToSend)
+
+    try {
+      updProduct.mutate(
+        formDataToSend,
+        {
+          onSuccess: () => {
+            setIsEditProductOpen(false);
+            setFormData(initialFormData);
+            setPreviewImage(null);
+            refetchProducts();
+          },
+          onError: () => {
+            toast({title: "Terjadi kesalahan ketika update produk", variant: 'destructive'})
+          }
+        }
+      );
+    } catch (error: any) {
+      console.error('Error updating product:', error.message);
+    }
+  };
+  // console.log("edit", selectedProduct)
+
 
   const handleEditClick = (product: Product) => {
     setSelectedProduct(product);
@@ -247,6 +254,17 @@ export default function ProductsContent() {
     setIsDeleteDialogOpen(true)
   }
 
+  const handleDeleteProduct = () => {
+    if (!selectedProduct) return
+
+    delProduct.mutate(selectedProduct.id, {
+      onSuccess: () => {
+        refetchProducts();
+        setIsDeleteDialogOpen(false)
+      }
+    });
+  }
+
   const handleAdjustStockClick = (product: Product) => {
     setSelectedProduct(product)
     setIsAdjustStockDialogOpen(true)
@@ -272,7 +290,6 @@ export default function ProductsContent() {
             open={isAddProductOpen || isEditProductOpen}
             onOpenChange={(open) => {
               if (!open) {
-                // Reset form saat dialog ditutup
                 setFormData(initialFormData)
                 setPreviewImage(null)
               }
@@ -708,6 +725,44 @@ export default function ProductsContent() {
           </Table>
         </CardContent>
       </Card>
+
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedProduct && (
+              <div className="flex items-center gap-3">
+                <div>
+                  <div className="font-medium">{selectedProduct.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {selectedProduct.description}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProduct}
+              // disabled={selectedCategory ? selectedCategory.products_count > 0 : false}
+            >
+              Hapus Kategori
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
 
   )

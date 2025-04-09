@@ -29,7 +29,6 @@ export default function POSPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [localProducts, setLocalProducts] = useState<Product[]>([])
 
-
   const { user, logout } = useAuth()
 
   const outletId = Number(user?.outlet_id) || 1
@@ -51,16 +50,6 @@ export default function POSPage() {
 
   console.log({ cashBalance, outletId })
 
-  // const addToCart = (product: { id: number; name: string; price: number; quantity: number }) => {
-  //   const existingItem = cart.find((item) => item.id === product.id)
-
-  //   if (existingItem) {
-  //     setCart(cart.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)))
-  //   } else {
-  //     setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1 }])
-  //   }
-  // }
-
   const addToCart = (product: {
     id: number;
     name: string;
@@ -70,7 +59,7 @@ export default function POSPage() {
     // Cek stok tersedia
     const currentProduct = localProducts.find(p => p.id === product.id);
     if (!currentProduct || currentProduct.quantity < 1) return;
-  
+
     // Update keranjang
     const existingItem = cart.find((item) => item.id === product.id);
     if (existingItem) {
@@ -80,7 +69,7 @@ export default function POSPage() {
     } else {
       setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1 }]);
     }
-  
+
     // Update stok lokal
     setLocalProducts(prev =>
       prev.map(p =>
@@ -89,49 +78,38 @@ export default function POSPage() {
     );
   };
 
-  // const removeFromCart = (id: number) => {
-  //   setCart(cart.filter((item) => item.id !== id))
-  // }
-
   const removeFromCart = (id: number) => {
     const item = cart.find(item => item.id === id);
     if (!item) return;
-  
+
     // Kembalikan stok
     setLocalProducts(prev =>
       prev.map(p =>
         p.id === id ? { ...p, quantity: p.quantity + item.quantity } : p
       )
     );
-  
+
     setCart(cart.filter((item) => item.id !== id));
   };
-  
-
-  // const updateQuantity = (id: number, quantity: number) => {
-  //   if (quantity < 1) return
-
-  //   setCart(cart.map((item) => (item.id === id ? { ...item, quantity } : item)))
-  // }
 
   const updateQuantity = (id: number, quantity: number) => {
     if (quantity < 1) return;
-  
+
     // Hitung perubahan kuantitas
     const item = cart.find(item => item.id === id);
     if (!item) return;
-  
+
     const quantityChange = quantity - item.quantity;
     const currentProduct = localProducts.find(p => p.id === id);
-  
+
     // Validasi stok
     if (currentProduct && (currentProduct.quantity - quantityChange) < 0) return;
-  
+
     // Update keranjang
-    setCart(cart.map((item) => 
+    setCart(cart.map((item) =>
       item.id === id ? { ...item, quantity } : item
     ));
-  
+
     // Update stok lokal
     if (currentProduct) {
       setLocalProducts(prev =>
@@ -140,13 +118,13 @@ export default function POSPage() {
         )
       );
     }
-  };  
+  };
 
   // Calculate subtotal
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   // Calculate tax (11%)
-  const tax = subtotal ? subtotal * 0.11 : 0;
+  const tax = subtotal ? subtotal * (user?.outlet.tax || 0 / 100) : 0;
   const total = subtotal + tax
 
   return (
@@ -156,8 +134,8 @@ export default function POSPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             {/* <ShoppingCart className="h-6 w-6 text-orange-500 mr-2" /> */}
-            <Image src="/logo-kifa.png" alt="Logo kifa" width={50} height={50} className="w-7 mr-4" />
-            <h1 className="text-xl font-bold text-orange-500">{user?.outlet.name}</h1>
+            <Image src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" alt="Logo kifa" width={50} height={50} className="w-7 mr-4" />
+            <h1 className="text-xl font-bold text-orange-500">{user?.outlet?.name}</h1>
           </div>
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
@@ -165,7 +143,7 @@ export default function POSPage() {
             <CashRegister outletId={outletId} cashBalance={Number(cashBalance?.data.balance) || 0} />
             <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
               <Clock className="mr-2 h-4 w-4" />
-              <span className="hidden lg:inline">Shift:</span> {user?.last_shift.start_time} - {user?.last_shift.end_time}
+              <span className="hidden lg:inline">Shift:</span> {user?.last_shift?.start_time} - {user?.last_shift?.end_time}
             </Badge>
             <div className="flex items-center">
               <User className="h-5 w-5 text-orange-500 mr-2" />
@@ -362,7 +340,7 @@ export default function POSPage() {
                   <span>Rp {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Pajak (11%)</span>
+                  <span className="text-muted-foreground">Pajak ({parseFloat(user?.outlet.tax)}%)</span>
                   <span>Rp {tax.toLocaleString()}</span>
                 </div>
                 <Separator className="my-2" />

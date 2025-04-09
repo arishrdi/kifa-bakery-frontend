@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [canLogin, setCanLogin] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,11 +45,14 @@ export default function LoginPage() {
       }
       await login({ email, password });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Terjadi kesalahan saat login",
-      );
+      // setError(
+      //   err instanceof Error ? err.message : "Terjadi kesalahan saat login",
+      // );
+
+      setError("Email atau password yang anda masukkan salah")
     } finally {
       setIsLoading(false);
+      setCanLogin(true)
     }
   };
 
@@ -56,8 +60,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img
-            src="/logo-kifa.png"
+          <Image
+            src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png"
             alt="Logo kifa"
             width={100}
             height={100}
@@ -84,8 +88,14 @@ export default function LoginPage() {
                 </Alert>
               )}
 
+              {canLogin && (
+                <Alert variant="default">
+                  <AlertDescription className="text-yellow-200">Berhasil login, anda akan diarahkan ke halaman selanjutnya</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="email">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input

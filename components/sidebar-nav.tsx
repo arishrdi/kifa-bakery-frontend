@@ -84,20 +84,17 @@ const navItems = [
       // { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: ArrowLeftRight },
     ],
   },
-  {
-    name: "POS",
-    href: "/pos",
-    icon: CreditCard,
-    subItems: [],
-  },
+  // {
+  //   name: "POS",
+  //   href: "/pos",
+  //   icon: CreditCard,
+  //   subItems: [],
+  // },
   {
     name: "Staff",
     href: "/dashboard/staff",
     icon: Users,
-    subItems: [
-      { name: "Staff", href: "/dashboard/staff?tab=staff", icon: Users },
-      { name: "Jadwal Shift", href: "/dashboard/staff?tab=shifts", icon: Clock },
-    ],
+    subItems: [],
   },
   {
     name: "Closing",
@@ -105,7 +102,7 @@ const navItems = [
     icon: LockKeyhole,
     subItems: [
       { name: "Hari Ini", href: "/dashboard/closing?tab=today", icon: Calendar },
-      { name: "Riwayat Closing", href: "/dashboard/closing?tab=history", icon: History },
+      { name: "Riwayat Kas", href: "/dashboard/closing?tab=history", icon: History },
     ],
   },
   {
@@ -163,7 +160,7 @@ export function SidebarNav() {
       <SidebarHeader className="border-b p-4 ">
         <div className="flex items-center">
           {/* <BarChart3 className="h-6 w-6 mr-2" /> */}
-          <Image src="/logo-kifa.png" alt="Logo kifa" width={200} height={200} className="w-12 mr-4" />
+          <Image src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" alt="Logo kifa" width={200} height={200} className="w-12 mr-4" />
           <h1 className="text-xl font-bold">Kifa Bakery</h1>
         </div>
         <div className="mt-4">

@@ -15,7 +15,7 @@ export const useUpdateCategory = (id: number) => {
 
 export const useDeleteCategory = () => {
     return createMutationHook<number, void, void>(
-      (id) => `/categories/${id}`, // Endpoint dibuat berdasarkan id dari variables
+      (id) => `/categories/${id}`, 
       'delete'
     )();
   };
