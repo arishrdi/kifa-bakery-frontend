@@ -1,16 +1,9 @@
-bug
-- Logika ketika stok habis POS
-- Invalidate kadang pada POS tidak berfungsi
-- Outlet id pada kas
-- Gambar kadang error
-- Perbaiki overflow pada modal: history transaksi, 
-- filter tanggal pada riwayat transksi
-- error pas login kasir
-- error pas buka sidebar mobile
-- is_active pada user
-
-- Upload gambar (sudah)
-- Laporan
-- Shift (sudah)
-- Stok
-- 
+- logo di nota kifa dipindah sebelah kiri dan tulisan sejajar sebelah kanan dengan logo
+- Refund hanya di akun kantor, kasir/outlet tidak ada opsi refund
+- Di tampilan POS, nominal uang yg disamping stok bisa dibuat range tertentu agar tidak bingung dan bisa ditentukan dalam waktu tertentu
+- Penyesuaian stok yg ada dimenu produk dipindah ke menu stok
+- Laporan -> menu stok: ingin ada tambahan laporan seperti di data spreadsheet yg dikirim tim kifa. 
+- Terkait adjusment minta ada laporanya, contoh setiap adjustment yg sudah disetujui itu datanya apa saja. Contoh adjusment kiriman pabrik nanti bisa di rentang waktu tertentu.
+- Laporan rentang waktunya ingin diubah rentang waktu tertentu, jangan perbulan
+- Laporan tampilanya ingin seperti contoh yg dikirimkan di grup
+- Sistem membership
