@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -11,41 +11,199 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
 import { cn } from "@/lib/utils"
-import { CalendarIcon, FileText, Search } from "lucide-react"
-import { getHistoryOrders } from "@/services/order-service"
+import { CalendarIcon, FileText, Banknote, Search, TicketX, Printer } from "lucide-react"
+import { cancelOrder, getHistoryOrders } from "@/services/order-service"
 import { useAuth } from "@/contexts/auth-context"
-import { PrintInvoice } from "./print-invoice"
+import { OrderItem } from "@/types/order-history"
+import { Outlet } from "@/types/outlet"
+import { toast } from "@/hooks/use-toast"
+import { printOrders } from "./print-orders"
 
 interface TransactionHistoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  refetchBalance: any
 }
 
-export function TransactionHistoryModal({ open, onOpenChange }: TransactionHistoryModalProps) {
+export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: TransactionHistoryModalProps) {
   const [date, setDate] = useState<Date>(new Date())
   const [searchQuery, setSearchQuery] = useState("")
+  // const [selectedTransaction, setSelectedTransaction] = useState<OrderItem | null>(null)
+  // const [refundPopover, setRefundPopover] = useState(false)
+  const [selectedInvoice, setSelectedInvoice] = useState("")
 
   const { user } = useAuth()
-  const orderHistory = getHistoryOrders(user?.outlet_id, format(date, 'yyyy-MM-dd'),format(date, 'yyyy-MM-dd'), 100, 'completed')
+  const orderHistory = getHistoryOrders(user?.outlet_id, format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
 
-  const { data: transactionData } = orderHistory()
-  const [showInvoice, setShowInvoice] = useState(false);
+  const { data: transactionData, refetch: refetchOrder } = orderHistory()
 
+  const filteredTransactions = transactionData?.data.orders.filter((transaction) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      transaction.order_number.toLowerCase().includes(searchLower) ||
+      // transaction.id.toString().includes(searchQuery) || // ID biasanya number, sesuaikan jika perlu
+      // transaction.payment_method.toLowerCase().includes(searchLower)
+      transaction.user.toLowerCase().includes(searchLower)
+    );
+  }) || [];
 
-  console.log(transactionData?.data.orders.data)
-  // Filter transactions based on date and search query
-  const filteredTransactions = transactionData?.data.orders.data.filter((transaction) => {
-    const matchesDate = transaction.created_at === format(date, "yyyy-MM-dd")
-    const matchesSearch =
-      transaction.id.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.payment_method.toLowerCase().includes(searchQuery.toLowerCase())
+  const cancelOrderMutate = cancelOrder()
 
-    return matchesDate && (searchQuery === "" || matchesSearch)
-  })
+  const handleCancelOrder = (id: number) => {
+    cancelOrderMutate.mutate(id, {
+      onSuccess: () => {
+        refetchOrder()
+        // setRefundPopover(false)
+        refetchBalance()
+        toast({ description: "Berhasil melakukan refund" })
+      }
+    })
+  }
+
+  // Function to handle printing the receipt
+  const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
+    // setSelectedTransaction(transaction);
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=400,height=600')
+
+    if (printWindow) {
+      // Generate receipt content
+      const receiptContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Struk Transaksi #${transaction.order_number}</title>
+          <style>
+            body {
+              font-family: 'Courier New', monospace;
+              margin: 0;
+              padding: 20px;
+              max-width: 300px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .title {
+              font-size: 16px;
+              font-weight: bold;
+            }
+            .info {
+              font-size: 12px;
+              margin: 5px 0;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 10px 0;
+            }
+            .item {
+              display: flex;
+              justify-content: space-between;
+              font-size: 12px;
+              margin: 5px 0;
+            }
+            .total {
+              font-weight: bold;
+              margin-top: 10px;
+              text-align: right;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+            }
+            .logo {
+              max-width: 40px; 
+              height: auto; 
+              margin-bottom: 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+              <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" alt="Logo Outlet" class="logo"" />
+              <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
+              <div class="info">${outlet.name}</div>
+              <div class="info">Rajanya Roti Hajatan</div>
+              <div class="info">Alamat: ${outlet.address}</div>
+              <div class="info">Telp: ${outlet.phone}</div>
+
+              <div class="divider"></div>
+            <div class="info">No. Invoice: ${transaction.order_number}</div>
+            <div class="info">Tanggal: ${transaction.created_at}</div>
+            <div class="info">Kasir: ${transaction.user}</div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            ${transaction.items.map(item => `
+              <div class="item">
+                <div>${item.quantity}x ${item.product}</div>
+                <div>Rp ${Number(item.price * item.quantity).toLocaleString()}</div>
+              </div>
+              `).join('')}
+              ${parseInt(transaction.tax) > 0
+          ? `
+                <div class="item">
+                <div>PPN:</div>
+                <div>Rp ${Number(transaction.tax).toLocaleString()}</div>
+                </div>
+                `
+          : ''
+        }
+              <div class="divider"></div>
+              <div class="item">
+                <div>Subtotal: </div>
+                <div>Rp ${Number(transaction.subtotal).toLocaleString()}</div>
+              </div>
+          </div>
+          <div class="divider"></div>
+          <div class="total">Total: Rp ${Number(transaction.total).toLocaleString()}</div>
+           ${transaction.payment_method === 'cash'
+          ? `
+          <div class="item">
+            <div>Metode Pembayaran:</div>
+            <div>${transaction.payment_method === "cash" ? "TUNAI" : "QRIS"}</div>
+          </div>
+          <div class="item">
+            <div>Bayar:</div>
+            <div>Rp ${Number(transaction.total_paid).toLocaleString()}</div>
+          </div>
+          <div class="item">
+            <div>Kembalian:</div>
+            <div>Rp ${Number(transaction.change).toLocaleString()}</div>
+          </div>
+        `
+          : ''
+        }
+          <div class="divider"></div>
+          <div class="footer">
+            Terima kasih atas kunjungan Anda!
+          </div>
+        </body>
+        </html>
+      `
+
+      // Write content to the new window
+      printWindow.document.open()
+      printWindow.document.write(receiptContent)
+      printWindow.document.close()
+
+      // Trigger print when content is loaded
+      printWindow.onload = function () {
+        printWindow.print()
+        // Close the window after printing (optional - some browsers might close automatically)
+        // printWindow.close()
+      }
+    } else {
+      console.error('Failed to open print window')
+      alert('Tidak dapat membuka jendela cetak. Periksa pengaturan popup browser Anda.')
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="sm:max-w-[1200px]">
         <DialogHeader>
           <DialogTitle>Riwayat Transaksi</DialogTitle>
           <DialogDescription>Lihat riwayat transaksi berdasarkan tanggal</DialogDescription>
@@ -75,13 +233,14 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
                 />
               </PopoverContent>
             </Popover>
+            {user?.id && transactionData?.data.total_orders ? <Button onClick={() => printOrders({ outlet: user?.outlet, transactions: transactionData?.data })}><Printer /> Cetak</Button> : null}
           </div>
           <div className="relative w-full sm:w-auto">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Cari transaksi..."
-              className="pl-8 border-orange-200 w-full sm:w-[200px]"
+              placeholder="Cari transaksi berdasarkan invoice..."
+              className="pl-8 border-orange-200 w-full sm:w-[400px]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -102,55 +261,129 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID Transaksi</TableHead>
-                <TableHead>Waktu</TableHead>
-                <TableHead>Kasir</TableHead>
-                <TableHead>Item</TableHead>
-                <TableHead>Pembayaran</TableHead>
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-sm font-semibold text-gray-700">Invoice</TableHead>
+                <TableHead className="text-sm font-semibold text-gray-700">Waktu</TableHead>
+                <TableHead className="text-sm font-semibold text-gray-700">Kasir</TableHead>
+                <TableHead className="text-sm font-semibold text-gray-700">Pembayaran</TableHead>
+                <TableHead className="text-sm font-semibold text-gray-700">Status</TableHead>
+                <TableHead className="text-sm font-semibold text-gray-700 text-right">Total</TableHead>
                 <TableHead className="text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* {filteredTransactions?.map((transaction) => ( */}
-              {transactionData?.data.orders.data.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell className="font-medium">{transaction.order_number}</TableCell>
-                  <TableCell>{transaction.created_at}</TableCell>
-                  <TableCell>{transaction.user}</TableCell>
-                  <TableCell>{transaction.items.length} item</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        transaction.payment_method === "cash"
+
+              {filteredTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-sm text-gray-500">
+                    {searchQuery ? "Tidak ada transaksi yang cocok." : "Tidak ada transaksi pada tanggal ini."}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTransactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="hover:bg-gray-50 transition-colors">
+                    <TableCell className="text-sm text-gray-800 font-medium">{transaction.order_number}</TableCell>
+                    <TableCell className="text-sm text-gray-600">{transaction.created_at}</TableCell>
+                    <TableCell className="text-sm text-gray-600">{transaction.user}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs px-2 py-1 rounded-full ${transaction.payment_method === "cash"
                           ? "bg-green-100 text-green-800 border-green-200"
                           : "bg-blue-100 text-blue-800 border-blue-200"
-                      }
-                    >
-                      {transaction.payment_method === "cash" ? "Tunai" : "QRIS"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">Rp {Number(transaction.total).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => PrintInvoice({ cashierName: user?.name || "Kasir", order: transaction })} >
-                      <FileText className="h-4 w-4 text-orange-500" />
-                      {/* {showInvoice && <PrintInvoice cashierName={user?.name || "Kasir"}  order={transaction}/>} */}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          }`}
+                      >
+                        {transaction.payment_method === "cash" ? "Tunai" : "QRIS"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {transaction.status === 'completed' ? (
+                        <span className="text-green-600 font-medium">Selesai</span>
+                      ) : (
+                        <span className="text-red-500 font-medium">Dibatalkan</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-semibold text-gray-800">
+                      Rp {Number(transaction.total).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
 
-              {/* {filteredTransactions?.length === 0 && ( */}
-              {transactionData?.data.orders.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Tidak ada transaksi pada tanggal ini.
-                  </TableCell>
-                </TableRow>
+
+                        {transaction.status === 'completed' && (
+                          <Popover
+                            open={selectedInvoice === transaction.order_number}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setSelectedInvoice(transaction.order_number)
+                              } else {
+                                setSelectedInvoice("")
+                              }
+                            }}
+                            modal
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <TicketX className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-72 p-4 rounded-md shadow-lg border border-gray-200 bg-white"
+                              align="end"
+                              sideOffset={8}
+                            >
+                              <div className="space-y-3">
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-900">Refund Transaksi?</h4>
+                                  <p className="text-xs text-gray-500">Invoice: {selectedInvoice}</p>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                  <Button
+                                    size="sm"
+                                    className="bg-red-500 hover:bg-red-600 text-white"
+                                    onClick={() => handleCancelOrder(transaction.id)}
+                                  >
+                                    Refund
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSelectedInvoice('')}
+                                  >
+                                    Batal
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => {
+                            if (user?.outlet) {
+                              handlePrintReceipt(transaction, user.outlet)
+                            }
+                          }}
+                          title="Cetak struk"
+                        >
+                          <FileText className="h-4 w-4 text-orange-500" />
+                        </Button>
+
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
+
         </div>
 
         <div className="mt-4 flex justify-end">
@@ -162,4 +395,3 @@ export function TransactionHistoryModal({ open, onOpenChange }: TransactionHisto
     </Dialog>
   )
 }
-

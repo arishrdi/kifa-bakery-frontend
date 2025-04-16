@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useOutlet } from "@/contexts/outlet-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,51 +33,11 @@ import {
 import { createCategory, getAllCategories, useDeleteCategory, useUpdateCategory } from "@/services/category-service"
 import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 import { Category } from "@/types/category"
-
-// Sample categories data
-// const initialCategories = [
-//   {
-//     id: 1,
-//     name: "Roti",
-//     description: "Berbagai jenis roti dan pastry",
-//     productCount: 15,
-//     isActive: true,
-//     icon: "Cake",
-//     color: "#FDA4AF",
-//   },
-//   {
-//     id: 2,
-//     name: "Donat",
-//     description: "Donat dengan berbagai topping",
-//     productCount: 8,
-//     isActive: true,
-//     icon: "Coffee",
-//     color: "#FCD34D",
-//   },
-//   {
-//     id: 3,
-//     name: "Kue",
-//     description: "Kue tradisional dan modern",
-//     productCount: 25,
-//     isActive: true,
-//     icon: "Cake",
-//     color: "#86EFAC",
-//   },
-//   {
-//     id: 4,
-//     name: "Pastry",
-//     description: "Pastry dan kue kering",
-//     productCount: 12,
-//     isActive: true,
-//     icon: "Pizza",
-//     color: "#93C5FD",
-//   },
-// ]
+import { toast } from "@/hooks/use-toast"
 
 export default function CategoriesContent() {
   const { currentOutlet } = useOutlet()
   const [searchQuery, setSearchQuery] = useState("")
-  // const [categories, setCategories] = useState(initialCategories)
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -120,10 +79,20 @@ export default function CategoriesContent() {
         setIsAddCategoryOpen(false)
         resetForm()
         refetchCategories()
+        toast({
+          title: "Kategori Berhasil Ditambahkan!",
+          description: "Kategori baru telah berhasil disimpan ke sistem.",
+          variant: "default"
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Gagal Menambahkan Kategori!",
+          description: "Terjadi kesalahan saat mencoba menambahkan kategori. Silakan coba lagi.",
+          variant: "destructive"
+        })
       }
     })
-    setIsAddCategoryOpen(false)
-    resetForm()
   }
 
   const handleEditClick = (category: Category) => {
@@ -148,33 +117,48 @@ export default function CategoriesContent() {
         refetchCategories()
         setIsEditCategoryOpen(false)
         resetForm()
+        toast({
+          title: "Perubahan Disimpan!",
+          description: "Kategori telah berhasil diperbarui.",
+          variant: "default"
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Gagal Memperbarui Kategori!",
+          description: "Terjadi kesalahan saat mencoba memperbarui kategori. Silakan coba lagi.",
+          variant: "destructive"
+        })
       }
     })
   }
 
   const handleDeleteClick = (category: Category) => {
     setSelectedCategory(category)
-    console.log("delete", selectedCategory)
     setIsDeleteDialogOpen(true)
   }
 
   const handleDeleteCategory = () => {
     if (!selectedCategory) return
 
-    // deleteCategory.mutate(selectedCategory.id, {
-    //   onSuccess: () => {
-    //     refetchCategories()
-    //   }
-    // })
-
     deleteCategory.mutate(selectedCategory.id, {
       onSuccess: () => {
         refetchCategories();
         setIsDeleteDialogOpen(false);
+        toast({
+          title: "Kategori Berhasil Dihapus!",
+          description: "Kategori telah berhasil dihapus dari sistem.",
+          variant: "default"
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Gagal Menghapus Kategori!",
+          description: "Terjadi kesalahan saat mencoba menghapus kategori. Silakan coba lagi.",
+          variant: "destructive"
+        })
       }
     });
-    setIsDeleteDialogOpen(false)
-    setSelectedCategory(null)
   }
 
   const resetForm = () => {
@@ -200,7 +184,13 @@ export default function CategoriesContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
+          <Dialog 
+            open={isAddCategoryOpen} 
+            onOpenChange={(open) => {
+              if (!open) resetForm();
+              setIsAddCategoryOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="bg-orange-500 hover:bg-orange-600">
                 <Plus className="mr-2 h-4 w-4" /> Tambah Kategori
@@ -217,7 +207,13 @@ export default function CategoriesContent() {
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nama Kategori</Label>
-                    <Input id="name" name="name" value={newCategory.name} onChange={handleInputChange} required />
+                    <Input 
+                      id="name" 
+                      name="name" 
+                      value={newCategory.name} 
+                      onChange={handleInputChange} 
+                      required 
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -230,13 +226,22 @@ export default function CategoriesContent() {
                       rows={2}
                     />
                   </div>
-
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsAddCategoryOpen(false)
+                      resetForm()
+                    }}
+                  >
                     Batal
                   </Button>
-                  <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
+                  <Button 
+                    type="submit" 
+                    className="bg-orange-500 hover:bg-orange-600"
+                  >
                     Simpan
                   </Button>
                 </DialogFooter>
@@ -246,13 +251,15 @@ export default function CategoriesContent() {
         </div>
       </div>
 
-      {/* {currentOutlet && (
+      {currentOutlet && (
         <Alert>
           <Store className="h-4 w-4" />
           <AlertTitle>Mengelola kategori untuk: {currentOutlet.name}</AlertTitle>
-          <AlertDescription>Kategori yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
+          <AlertDescription>
+            Kategori yang ditampilkan adalah untuk outlet {currentOutlet.name}.
+          </AlertDescription>
         </Alert>
-      )} */}
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -266,12 +273,11 @@ export default function CategoriesContent() {
                 <TableHead>Kategori</TableHead>
                 <TableHead>Deskripsi</TableHead>
                 <TableHead className="text-center">Jumlah Produk</TableHead>
-                {/* <TableHead>Status</TableHead> */}
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories && categories.data.map((category) => (
+              {filteredCategories && filteredCategories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>
                     <div className="font-medium">{category.name}</div>
@@ -295,7 +301,7 @@ export default function CategoriesContent() {
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteClick(category)}
-                        // disabled={category.products_count > 0}
+                          disabled={category.products_count > 0}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Hapus
                         </DropdownMenuItem>
@@ -306,7 +312,7 @@ export default function CategoriesContent() {
               ))}
               {filteredCategories && filteredCategories.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     Tidak ada kategori yang ditemukan.
                   </TableCell>
                 </TableRow>
@@ -317,17 +323,31 @@ export default function CategoriesContent() {
       </Card>
 
       {/* Edit Category Dialog */}
-      <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
+      <Dialog 
+        open={isEditCategoryOpen} 
+        onOpenChange={(open) => {
+          if (!open) resetForm();
+          setIsEditCategoryOpen(open);
+        }}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Kategori</DialogTitle>
-            <DialogDescription>Ubah detail kategori di bawah ini. Klik simpan setelah selesai.</DialogDescription>
+            <DialogDescription>
+              Ubah detail kategori di bawah ini. Klik simpan setelah selesai.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditCategory}>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Nama Kategori</Label>
-                <Input id="edit-name" name="name" value={newCategory.name} onChange={handleInputChange} required />
+                <Input 
+                  id="edit-name" 
+                  name="name" 
+                  value={newCategory.name} 
+                  onChange={handleInputChange} 
+                  required 
+                />
               </div>
 
               <div className="space-y-2">
@@ -338,15 +358,24 @@ export default function CategoriesContent() {
                   value={newCategory.description}
                   onChange={handleInputChange}
                   rows={2}
-                  required
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditCategoryOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditCategoryOpen(false)
+                  resetForm()
+                }}
+              >
                 Batal
               </Button>
-              <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
+              <Button 
+                type="submit" 
+                className="bg-orange-500 hover:bg-orange-600"
+              >
                 Simpan Perubahan
               </Button>
             </DialogFooter>
@@ -358,7 +387,7 @@ export default function CategoriesContent() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogTitle>Konfirmasi Hapus Kategori</DialogTitle>
             <DialogDescription>
               Apakah Anda yakin ingin menghapus kategori ini? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
@@ -368,23 +397,27 @@ export default function CategoriesContent() {
               <div className="flex items-center gap-3">
                 <div>
                   <div className="font-medium">{selectedCategory.name}</div>
-                  <div className="text-xs text-muted-foreground ">
+                  <div className="text-xs text-muted-foreground">
                     {selectedCategory.description}
                   </div>
                 </div>
               </div>
             )}
             {selectedCategory && selectedCategory.products_count > 0 && (
-              <div className="mt-4 rounded-md bg-yellow-50 p-3 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-                <p className="text-sm">
+              <Alert variant="destructive" className="mt-4">
+                <AlertTitle>Peringatan</AlertTitle>
+                <AlertDescription>
                   Kategori ini memiliki {selectedCategory.products_count} produk terkait. Hapus atau pindahkan
                   produk-produk tersebut sebelum menghapus kategori.
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Batal
             </Button>
             <Button
@@ -400,4 +433,3 @@ export default function CategoriesContent() {
     </div>
   )
 }
-

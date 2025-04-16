@@ -10,13 +10,28 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Store } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { getDashboardReport } from "@/services/report-service"
+import { DateRange } from "react-day-picker"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { useState } from "react"
+import { startOfMonth, endOfDay } from "date-fns"
 
 export default function DashboardPage() {
   const { currentOutlet, isLoading } = useOutlet()
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "overview"
+
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: startOfMonth(new Date()),
+    to: endOfDay(new Date()),
+  })
+
+
   // const tab = searchParams.get("tab") || "overview"
-  const { data: dashboardReport, isLoading: isLoadingDashboardReport } = getDashboardReport(currentOutlet?.id || 0) 
+  const { data: dashboardReport, isLoading: isLoadingDashboardReport } = getDashboardReport(
+    currentOutlet?.id || 1,
+    dateRange
+  )
+
 
   return (
     <div className="flex flex-col">
@@ -28,13 +43,18 @@ export default function DashboardPage() {
             <Store className="h-4 w-4" />
             <AlertTitle>Outlet Aktif: {currentOutlet.name}</AlertTitle>
             <AlertDescription>Data yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
+
+            <DateRangePicker
+                      value={dateRange}
+                      onChange={setDateRange}
+                    />
           </Alert>
         )}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Penjualan Hari Ini</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Penjualan</CardTitle>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -49,12 +69,16 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.total_sales || 0}</div>
+              <div className="text-2xl font-bold">Rp {(dashboardReport?.data.summary.total_sales)?.toLocaleString()}</div>
+              {/* <p className="text-xs text-muted-foreground">
+                {dashboardReport?.data.sales.change_percentage > 0 ? "+" : ""}
+                {dashboardReport?.data.sales.change_percentage}% dari periode sebelumnya
+              </p> */}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Transaksi Hari Ini</CardTitle>
+              <CardTitle className="text-sm font-medium">Transaksi</CardTitle>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -71,7 +95,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_orders || 0}</div>
+              <div className="text-2xl font-bold">{dashboardReport?.data.summary.total_orders}</div>
             </CardContent>
           </Card>
           <Card>
@@ -97,7 +121,7 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rata-rata penjualan</CardTitle>
+              <CardTitle className="text-sm font-medium">Total kas Kasir</CardTitle>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -112,7 +136,7 @@ export default function DashboardPage() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rp {dashboardReport?.data.summary.average_order_value || 0}</div>
+              <div className="text-2xl font-bold">Rp {parseInt(dashboardReport?.data.cash ?? "0").toLocaleString() || 0}</div>
             </CardContent>
           </Card>
         </div>
@@ -126,18 +150,22 @@ export default function DashboardPage() {
                   {currentOutlet && <CardDescription>Data penjualan untuk {currentOutlet.name}</CardDescription>}
                 </CardHeader>
                 <CardContent className="pl-2">
-                  {dashboardReport?.data.hourly_sales && (
-                    <Overview data={dashboardReport?.data.hourly_sales} />
-                  )}  
+                  {dashboardReport?.data.daily_sales && (
+                    <Overview data={dashboardReport.data.daily_sales} />
+                  )}
                 </CardContent>
               </Card>
               <Card className="col-span-3">
                 <CardHeader>
-                  <CardTitle>Penjualan Terbaru</CardTitle>
-                  <CardDescription>Anda memiliki 128 transaksi hari ini</CardDescription>
+                  <CardTitle>Penjualan Terlaris</CardTitle>
+                  
+                  <CardDescription>
+                    {dashboardReport?.data.top_products.length || 0} produk terlaris 
+                  </CardDescription>
+                  
                 </CardHeader>
                 <CardContent>
-                  <RecentSales />
+                  <RecentSales products={dashboardReport?.data.top_products || []} />
                 </CardContent>
               </Card>
             </div>

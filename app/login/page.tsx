@@ -44,6 +44,7 @@ export default function LoginPage() {
         throw new Error("Email dan password harus diisi");
       }
       await login({ email, password });
+      setCanLogin(true)
     } catch (err) {
       // setError(
       //   err instanceof Error ? err.message : "Terjadi kesalahan saat login",
@@ -52,7 +53,6 @@ export default function LoginPage() {
       setError("Email atau password yang anda masukkan salah")
     } finally {
       setIsLoading(false);
-      setCanLogin(true)
     }
   };
 
@@ -84,13 +84,13 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
-                  <AlertDescription className="dark:text-red-200">{error}</AlertDescription>
+                  <AlertDescription className="text-primary">{error}</AlertDescription>
                 </Alert>
               )}
 
               {canLogin && (
                 <Alert variant="default">
-                  <AlertDescription className="text-yellow-200">Berhasil login, anda akan diarahkan ke halaman selanjutnya</AlertDescription>
+                  <AlertDescription className="text-primary">Berhasil login, anda akan diarahkan ke halaman selanjutnya</AlertDescription>
                 </Alert>
               )}
 
@@ -162,12 +162,12 @@ export default function LoginPage() {
         </Card>
 
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Punya kendala?{" "}
-            <Link href="#" className="text-primary hover:underline">
-              Hubungi administrator
-            </Link>
-          </p>
+          <div className="flex items-center gap-5 justify-center">
+            <p className="text-sm text-muted-foreground">
+              &copy; Copyright
+            </p>
+            <img src="https://i.ibb.co.com/Y45wQQMQ/Logo-IT-Solution-Bermerk-Hitam.png" alt="" className="w-20" />
+          </div>
         </div>
       </div>
     </div>

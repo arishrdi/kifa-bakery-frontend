@@ -24,6 +24,7 @@ import { id } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useSearchParams } from "next/navigation"
+import { getCashHistory, getCashHistoryPOS } from "@/services/cash-transaction-service"
 
 const closingData = [
   {
@@ -96,6 +97,12 @@ export default function ClosingPage() {
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "today"
 
+  const query = getCashHistory(currentOutlet?.id ?? 0)
+  const { data } = query()
+
+  const queryOrder = getCashHistoryPOS(currentOutlet?.id ?? 0)
+  const { data: dataOrder } = queryOrder()
+
   const [date, setDate] = useState<Date>(new Date())
   const [isClosingDialogOpen, setIsClosingDialogOpen] = useState(false)
   const [closingNotes, setClosingNotes] = useState("")
@@ -105,7 +112,7 @@ export default function ClosingPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Sistem Closing</h2>
         <div className="flex items-center space-x-2">
-          <Dialog open={isClosingDialogOpen} onOpenChange={setIsClosingDialogOpen}>
+          {/* <Dialog open={isClosingDialogOpen} onOpenChange={setIsClosingDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Lock className="mr-2 h-4 w-4" /> Closing Hari Ini
@@ -171,7 +178,7 @@ export default function ClosingPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+          </Dialog> */}
         </div>
       </div>
 
@@ -183,14 +190,14 @@ export default function ClosingPage() {
         </Alert>
       )}
 
-      {tab === "today" && (
+      {tab === "history-order" && (
         <Card>
           <CardHeader>
-            <CardTitle>Status Closing Hari Ini</CardTitle>
-            <CardDescription>{format(new Date(), "PPP", { locale: id })}</CardDescription>
+            <CardTitle>Riwayat Transaksi</CardTitle>
+            <CardDescription>Lihat riwayat transaksi</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-md bg-muted p-4">
+            {/* <div className="flex items-center justify-between rounded-md bg-muted p-4">
               <div className="flex items-center">
                 <Clock className="mr-2 h-5 w-5 text-muted-foreground" />
                 <div>
@@ -209,53 +216,46 @@ export default function ClosingPage() {
               >
                 {todayClosingData.status === "open" ? "Terbuka" : "Tertutup"}
               </Badge>
-            </div>
+            </div> */}
 
             <div className="rounded-md border">
               <div className="p-4">
-                <h3 className="font-semibold">Ringkasan Shift</h3>
+                <h3 className="font-semibold">Ringkasan Transaksi</h3>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Shift</TableHead>
+                    <TableHead>User</TableHead>
                     <TableHead>Waktu</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Transaksi</TableHead>
-                    <TableHead className="text-right">Penjualan</TableHead>
+                    <TableHead>Tipe</TableHead>
+                    <TableHead>Alasan</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {todayClosingData.shifts.map((shift, index) => (
-                    <TableRow key={`shift-${index}`}>
-                      <TableCell className="font-medium">{shift.name}</TableCell>
-                      <TableCell>{shift.time}</TableCell>
+                  {dataOrder?.data.map((orderHistory) => (
+                    <TableRow key={`shift-${orderHistory.id}`}>
+                      <TableCell className="font-medium">{orderHistory.user.name}</TableCell>
+                      {/* <TableCell>{orderHistory.created_at.toLocaleDateString('id-ID')}</TableCell> */}
+                      <TableCell>{new Date(orderHistory.created_at).toLocaleDateString('id-ID')}</TableCell>
                       <TableCell>
-                        {shift.status === "active" && (
+                        {orderHistory.type === "add" && (
                           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                            Aktif
+                            + Penambahan
                           </Badge>
                         )}
-                        {shift.status === "closed" && (
+                        {orderHistory.type === "remove" && (
                           <Badge
                             variant="outline"
-                            className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                            className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-blue-100"
                           >
-                            Selesai
-                          </Badge>
-                        )}
-                        {shift.status === "upcoming" && (
-                          <Badge
-                            variant="outline"
-                            className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                          >
-                            Akan Datang
+                            - Pengurangan
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">{shift.transactions}</TableCell>
+                      <TableCell >{orderHistory.reason}</TableCell>
                       <TableCell className="text-right">
-                        {shift.sales > 0 ? `Rp ${shift.sales.toLocaleString()}` : "-"}
+                        Rp. {parseInt(orderHistory.amount).toLocaleString()}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -263,7 +263,7 @@ export default function ClosingPage() {
               </Table>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Ringkasan Penjualan</CardTitle>
@@ -315,7 +315,7 @@ export default function ClosingPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       )}
@@ -328,7 +328,7 @@ export default function ClosingPage() {
               <CardDescription>Lihat riwayat kas</CardDescription>
             </div>
             <div className="ml-auto">
-              <Popover>
+              {/* <Popover>
                 <PopoverTrigger asChild>
                   <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -343,51 +343,54 @@ export default function ClosingPage() {
                     initialFocus
                   />
                 </PopoverContent>
-              </Popover>
+              </Popover> */}
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ditutup Oleh</TableHead>
-                  <TableHead>Waktu Closing</TableHead>
-                  <TableHead className="text-right">Transaksi</TableHead>
-                  <TableHead className="text-right">Total Penjualan</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {closingData.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          item.status === "closed"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                        }
-                      >
-                        {item.status === "closed" ? "Tertutup" : "Terbuka"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{item.closedBy}</TableCell>
-                    <TableCell>{item.closedAt}</TableCell>
-                    <TableCell className="text-right">{item.totalTransactions}</TableCell>
-                    <TableCell className="text-right">Rp {item.totalSales.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Laporan
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <div className="p-4">
+                <h3 className="font-semibold">Ringkasan Kas</h3>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead>Tipe</TableHead>
+                    <TableHead>Alasan</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data?.data.map((orderHistory) => (
+                    <TableRow key={`shift-${orderHistory.id}`}>
+                      <TableCell className="font-medium">{orderHistory.user.name}</TableCell>
+                      {/* <TableCell>{orderHistory.created_at.toLocaleDateString('id-ID')}</TableCell> */}
+                      <TableCell>{new Date(orderHistory.created_at).toLocaleDateString('id-ID')}</TableCell>
+                      <TableCell>
+                        {orderHistory.type === "add" && (
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                            + Penambahan
+                          </Badge>
+                        )}
+                        {orderHistory.type === "remove" && (
+                          <Badge
+                            variant="outline"
+                            className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-blue-100"
+                          >
+                            - Pengurangan
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell >{orderHistory.reason}</TableCell>
+                      <TableCell className="text-right">
+                        Rp. {parseInt(orderHistory.amount).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

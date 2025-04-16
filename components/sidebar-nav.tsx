@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Cake,
   Filter,
+  Truck,
 } from "lucide-react"
 import {
   Sidebar,
@@ -47,11 +48,12 @@ const navItems = [
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
-    subItems: [
-      { name: "Overview", href: "/dashboard?tab=overview", icon: LayoutDashboard },
-      { name: "Stok", href: "/dashboard?tab=stock", icon: Package },
-      { name: "Shift", href: "/dashboard?tab=shifts", icon: Clock },
-    ],
+    subItems: []
+    // subItems: [
+    //   { name: "Overview", href: "/dashboard?tab=overview", icon: LayoutDashboard },
+    //   { name: "Stok", href: "/dashboard?tab=stock", icon: Package },
+    //   { name: "Shift", href: "/dashboard?tab=shifts", icon: Clock },
+    // ],
   },
   {
     name: "Produk",
@@ -60,6 +62,7 @@ const navItems = [
     subItems: [
       { name: "Daftar Produk", href: "/dashboard/products?tab=list", icon: ClipboardList },
       { name: "Kategori", href: "/dashboard/products?tab=categories", icon: Filter },
+      { name: "Penyesuaian Stok", href: "/dashboard/products?tab=adjustment", icon: Package },
     ],
   },
   {
@@ -69,7 +72,7 @@ const navItems = [
     subItems: [
       { name: "Daftar Outlet", href: "/dashboard/outlets?tab=list", icon: ClipboardList },
       // { name: "Peta Outlet", href: "/dashboard/outlets?tab=map", icon: Map },
-      { name: "Performa Outlet", href: "/dashboard/outlets?tab=performance", icon: BarChart },
+      // { name: "Performa Outlet", href: "/dashboard/outlets?tab=performance", icon: BarChart },
     ],
   },
   {
@@ -81,7 +84,8 @@ const navItems = [
       { name: "Stok Realtime", href: "/dashboard/stock?tab=realtime", icon: Package },
       { name: "Riwayat Stok", href: "/dashboard/stock?tab=history", icon: History },
       { name: "Stok Per Tanggal", href: "/dashboard/stock?tab=custom", icon: Calendar },
-      // { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: ArrowLeftRight },
+      { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: Truck },
+      { name: "Approve Stok", href: "/dashboard/stock?tab=approve", icon: ArrowLeftRight },
     ],
   },
   // {
@@ -101,8 +105,9 @@ const navItems = [
     href: "/dashboard/closing",
     icon: LockKeyhole,
     subItems: [
-      { name: "Hari Ini", href: "/dashboard/closing?tab=today", icon: Calendar },
+      // { name: "Hari Ini", href: "/dashboard/closing?tab=today", icon: Calendar },
       { name: "Riwayat Kas", href: "/dashboard/closing?tab=history", icon: History },
+      { name: "Riwayat Transaksi", href: "/dashboard/closing?tab=history-order", icon: History },
     ],
   },
   {
@@ -110,11 +115,10 @@ const navItems = [
     href: "/dashboard/reports",
     icon: FileBarChart,
     subItems: [
-      { name: "Overview", href: "/dashboard/reports?tab=overview", icon: LayoutDashboard },
-      { name: "Penjualan", href: "/dashboard/reports?tab=sales", icon: LineChart },
+      { name: "Penjualan Perhari", href: "/dashboard/reports?tab=dailySales", icon: LineChart },
+      { name: "Penjualan per Item", href: "/dashboard/reports?tab=monthly", icon: FileBarChart },
+      { name: "Penjualan per Kategori", href: "/dashboard/reports?tab=kategori", icon: BarChart },
       { name: "Stok", href: "/dashboard/reports?tab=stock", icon: Package },
-      { name: "Laporan Bulanan", href: "/dashboard/reports?tab=monthly", icon: FileBarChart },
-      { name: "Perbandingan Outlet", href: "/dashboard/reports?tab=outlets", icon: BarChart },
     ],
   },
 ]

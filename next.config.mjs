@@ -14,11 +14,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    // unoptimized: true,
     remotePatterns: [
       {
         protocol: 'http',
         hostname: 'kifa-bakery-backend.test',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pos.jasabuatwebsitejogja.com',
       },
       {
         protocol: 'https',

@@ -7,8 +7,12 @@ export interface InventoryInput {
   outlet_id: number;
   product_id: number;
   quantity_change: number;
-  type: "purchase" | "sale" | "adjustment";
+  type: "purchase" | "sale" | "adjustment" | "shipment" | "other";
   notes: string;
+}
+
+export interface InventoryApprovalInput {
+  inventory_history_id: number
 }
 
 export interface Inventory {
@@ -17,7 +21,8 @@ export interface Inventory {
   quantity_before: number;
   quantity_after: number;
   quantity_change: number;
-  type: "purchase" | "sale" | "adjustment";
+  type: "purchase" | "sale" | "adjustment" | "shipment" | "other";
+  status: "approved" | "pending" | "rejected"
   notes: string;
   user_id: number;
   updated_at: string;
@@ -29,7 +34,7 @@ export interface InventoryHistoryByOutletResponse extends StatusMessage {
   data: InventoryWithRelations[];
 }
 
-type InventoryWithRelations = Inventory & {
+export type InventoryWithRelations = Inventory & {
   outlet: Outlet;
   product: Product;
   user: User;

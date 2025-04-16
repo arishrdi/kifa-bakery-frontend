@@ -17,10 +17,12 @@ import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSearchParams } from "next/navigation"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertDialogHeader } from "@/components/ui/alert-dialog"
 import { getInventoryByDate, getRealtimeStock } from "@/services/report-service"
 import { useInventoryHistoryByOutlet } from "@/services/inventory-service"
+import TransferStokContent from "@/components/products/transfer-stock-content"
+import ApproveStock from "@/components/products/approve-stock"
 
 // const stockData = [
 //   {
@@ -133,6 +135,8 @@ export default function StockPage() {
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "realtime"
 
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [date, setDate] = useState<Date>(new Date())
   const [dateHistory, setDateHistory] = useState<Date>(new Date())
   const [searchQuery, setSearchQuery] = useState("")
@@ -149,6 +153,10 @@ export default function StockPage() {
   const { data: inventoryHistoryData } = useInventoryHistoryByOutlet(currentOutlet?.id || 0, formattedDateHistory)
   const { data: inventoryByDateData, isLoading: isInventoryByDateLoading } = getInventoryByDate(currentOutlet?.id || 0, formattedDate)
 
+  const showProductDetail = (product) => {
+    setSelectedProduct(product)
+    setIsDetailOpen(true)
+  }
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex items-center justify-between">
@@ -174,6 +182,12 @@ export default function StockPage() {
           <AlertDescription>Data stok yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
         </Alert>
       )}
+
+      {tab === "transfer"
+        && <TransferStokContent />}
+
+      {tab === "approve" && <ApproveStock />}
+
 
       {tab === "realtime" && (
         <Card>
@@ -228,7 +242,9 @@ export default function StockPage() {
                     </TableCell>
                     <TableCell>{format(item.updated_at, "PPP", { locale: id })}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm"
+                        onClick={() => showProductDetail(item)}
+                      >
                         Detail
                       </Button>
                     </TableCell>
@@ -417,6 +433,87 @@ export default function StockPage() {
           </CardContent>
         </Card>
       )}
+
+
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detail Produk</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap mengenai produk
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Nama Produk</p>
+                  <p className="font-medium">{selectedProduct.product.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Kategori</p>
+                  <p>{selectedProduct.product.category.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Stok Saat Ini</p>
+                  <p className="font-medium">{selectedProduct.quantity}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Minimal Stok</p>
+                  <p>{selectedProduct.min_stock}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  {selectedProduct.quantity >= selectedProduct.min_stock && (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                    >
+                      Normal
+                    </Badge>
+                  )}
+                  {selectedProduct.quantity < selectedProduct.min_stock && selectedProduct.quantity > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                    >
+                      Stok Rendah
+                    </Badge>
+                  )}
+                  {selectedProduct.quantity === 0 && (
+                    <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+                      Habis
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Terakhir Diperbarui</p>
+                  <p>{format(selectedProduct.updated_at, "PPP", { locale: id })}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground">SKU</p>
+                <p>{selectedProduct.product.sku || "-"}</p>
+              </div>
+
+              {selectedProduct.product.description && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Deskripsi</p>
+                  <p>{selectedProduct.product.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="sm:justify-end">
+            <Button type="button" variant="secondary" onClick={() => setIsDetailOpen(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

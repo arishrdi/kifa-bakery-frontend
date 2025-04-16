@@ -20,20 +20,19 @@ import { createOutlet, deleteOutlet, getAllOutlets, updateOutlet } from "@/servi
 import { toast } from "@/hooks/use-toast"
 
 export default function OutletsPage() {
-  // const { outlets, currentOutlet } = useOutlet()
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "list"
 
   const { data: outlets, isLoading: isLoadingOutlets, refetch: refetchOutlets } = getAllOutlets()
   const { mutate: createOutletMutate, isPending: isCreatingOutlet } = createOutlet()
-  
+
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [previewQris, setPreviewQris] = useState<string | null>(null)
   const [selectedOutlet, setSelecetedOutlet] = useState<Outlet | null>(null)
-  
+
   const delOutlet = deleteOutlet()
   const updOutlet = updateOutlet(selectedOutlet?.id || 0)
 
@@ -48,8 +47,6 @@ export default function OutletsPage() {
   }
 
   const [formData, setFormData] = useState(initialFormData)
-
-
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -66,22 +63,34 @@ export default function OutletsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission logic here
-    console.log('Form data:', formData)
     const formDataToSend = new FormData()
     formDataToSend.append('name', formData.name)
     formDataToSend.append('address', formData.address)
     formDataToSend.append('phone', formData.phone)
     formDataToSend.append('email', formData.email)
     formDataToSend.append('tax', formData.tax.toString())
-    formDataToSend.append('qris', formData.qris)
+    if (formData.qris) {
+      formDataToSend.append('qris', formData.qris)
+    }
+    
     createOutletMutate(formDataToSend, {
       onSuccess: () => {
         setIsAddDialogOpen(false)
         setFormData(initialFormData)
         setPreviewQris(null)
         refetchOutlets()
-        toast({title: "Berhasil menambahkan outlet"})
+        toast({ 
+          title: "Outlet berhasil ditambahkan!", 
+          description: "Outlet baru telah berhasil disimpan ke sistem.",
+          variant: "default"
+        })
+      },
+      onError: () => {
+        toast({ 
+          title: "Gagal menambahkan outlet", 
+          description: "Terjadi kesalahan saat menyimpan outlet baru.",
+          variant: "destructive"
+        })
       }
     })
   }
@@ -90,21 +99,16 @@ export default function OutletsPage() {
     e.preventDefault()
 
     const formDataToSend = new FormData()
-
     formDataToSend.append('name', formData.name)
     formDataToSend.append('address', formData.address)
     formDataToSend.append('phone', formData.phone)
     formDataToSend.append('email', formData.email)
     formDataToSend.append('tax', formData.tax.toString())
-    // formDataToSend.append('qris', formData.qris)
-    formDataToSend.append('is_active', formData.is_active ? '1' : '0');
-
+    formDataToSend.append('is_active', formData.is_active ? '1' : '0')
 
     if (formData.qris) {
-      formDataToSend.append('qris', formData.qris);
+      formDataToSend.append('qris', formData.qris)
     }
-
-    console.log("update", formDataToSend)
 
     updOutlet.mutate(formDataToSend, {
       onSuccess: () => {
@@ -112,18 +116,24 @@ export default function OutletsPage() {
         setFormData(initialFormData)
         setPreviewQris(null)
         refetchOutlets()
-        toast({title: "Berhasil update outlet"})
+        toast({ 
+          title: "Perubahan disimpan!", 
+          description: "Data outlet telah berhasil diperbarui.",
+          variant: "default"
+        })
       },
       onError: () => {
-        toast({title: "Terjadi kesalahan ketika update outlet", variant: 'destructive'})
+        toast({ 
+          title: "Gagal menyimpan perubahan", 
+          description: "Terjadi kesalahan saat memperbarui data outlet.",
+          variant: "destructive"
+        })
       }
     })
-
   }
 
   const handleEditClick = (outlet: Outlet) => {
     setSelecetedOutlet(outlet)
-    // setIsAddDialogOpen(true)
     setIsEditDialogOpen(true)
 
     setFormData({
@@ -149,8 +159,20 @@ export default function OutletsPage() {
 
     delOutlet.mutate(selectedOutlet.id, {
       onSuccess: () => {
-        refetchOutlets();
+        refetchOutlets()
         setIsDeleteDialogOpen(false)
+        toast({ 
+          title: "Outlet berhasil dihapus", 
+          description: "Outlet telah dihapus dari sistem.",
+          variant: "default"
+        })
+      },
+      onError: () => {
+        toast({ 
+          title: "Gagal menghapus outlet", 
+          description: "Terjadi kesalahan saat menghapus outlet.",
+          variant: "destructive"
+        })
       }
     })
   }
@@ -180,7 +202,6 @@ export default function OutletsPage() {
           <Dialog open={isAddDialogOpen || isEditDialogOpen}
             onOpenChange={(open) => {
               if (!open) {
-                // Reset form saat dialog ditutup
                 setFormData(initialFormData)
                 setPreviewQris(null)
               }
@@ -192,7 +213,7 @@ export default function OutletsPage() {
             }}
           >
             <DialogTrigger asChild>
-              <Button className="bg-orange-500 hover:bg-orange-600" onClick={() => setSelecetedOutlet(false)}>
+              <Button className="bg-orange-500 hover:bg-orange-600" onClick={() => setSelecetedOutlet(null)}>
                 <Plus className="mr-2 h-4 w-4" /> Tambah Outlet
               </Button>
             </DialogTrigger>
@@ -342,9 +363,16 @@ export default function OutletsPage() {
                   <Button
                     type="submit"
                     className="gap-2 bg-orange-600 hover:bg-orange-700"
+                    disabled={isCreatingOutlet || updOutlet.isPending}
                   >
-                    <Plus className="h-4 w-4" />
-                    {selectedOutlet ? 'Simpan Perubahan' : 'Tambah Outlet'}
+                    {isCreatingOutlet || updOutlet.isPending ? (
+                      <span className="animate-pulse">Menyimpan...</span>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        {selectedOutlet ? 'Simpan Perubahan' : 'Tambah Outlet'}
+                      </>
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
@@ -431,47 +459,6 @@ export default function OutletsPage() {
         </Card>
       )}
 
-      {/* {tab === "performance" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Performa Outlet</CardTitle>
-            <CardDescription>Bandingkan performa antar outlet</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Outlet</TableHead>
-                  <TableHead className="text-right">Penjualan Bulan Ini</TableHead>
-                  <TableHead className="text-right">Transaksi</TableHead>
-                  <TableHead className="text-right">Rata-rata Transaksi</TableHead>
-                  <TableHead className="text-right">YoY Growth</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {outlets?.data.map((outlet) => (
-                  <TableRow key={outlet.id}>
-                    <TableCell className="font-medium">{outlet.name}</TableCell>
-                    <TableCell className="text-right">
-                      Rp {(Math.random() * 100000000 + 50000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
-                    </TableCell>
-                    <TableCell className="text-right">{Math.floor(Math.random() * 1000 + 500)}</TableCell>
-                    <TableCell className="text-right">
-                      Rp {(Math.random() * 100000 + 50000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={Math.random() > 0.3 ? "text-green-600" : "text-red-600"}>
-                        {Math.random() > 0.3 ? "+" : ""}
-                        {(Math.random() * 30 - (Math.random() > 0.3 ? 0 : 10)).toFixed(1)}%
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )} */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -491,14 +478,6 @@ export default function OutletsPage() {
                 </div>
               </div>
             )}
-            {/* {selectedCategory && selectedCategory.products_count > 0 && (
-              <div className="mt-4 rounded-md bg-yellow-50 p-3 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-                <p className="text-sm">
-                  Kategori ini memiliki {selectedCategory.products_count} produk terkait. Hapus atau pindahkan
-                  produk-produk tersebut sebelum menghapus kategori.
-                </p>
-              </div>
-            )} */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
@@ -507,9 +486,9 @@ export default function OutletsPage() {
             <Button
               variant="destructive"
               onClick={handleDeleteOutlet}
-            // disabled={selectedCategory ? selectedCategory.products_count > 0 : false}
+              disabled={delOutlet.isPending}
             >
-              Hapus Outlet
+              {delOutlet.isPending ? 'Menghapus...' : 'Hapus Outlet'}
             </Button>
           </DialogFooter>
         </DialogContent>

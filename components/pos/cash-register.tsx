@@ -132,6 +132,7 @@ export function CashRegister({ outletId, cashBalance }: { outletId: number, cash
                 value={amount ? `Rp ${Number.parseInt(amount).toLocaleString()}` : ""}
                 onChange={handleAmountChange}
                 className="border-orange-200"
+                required
               />
             </div>
 
@@ -171,10 +172,11 @@ export function CashRegister({ outletId, cashBalance }: { outletId: number, cash
               <Label htmlFor="note">Catatan</Label>
               <Input
                 id="note"
-                placeholder="Tambahkan catatan (opsional)"
+                placeholder="Tambahkan catatan"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 className="border-orange-200"
+                required
               />
             </div>
           </div>
@@ -186,7 +188,7 @@ export function CashRegister({ outletId, cashBalance }: { outletId: number, cash
             <Button
               onClick={handleSubmit}
               className="bg-orange-500 hover:bg-orange-600"
-              disabled={!amount || Number.parseInt(amount) <= 0}
+              disabled={!amount || Number.parseInt(amount) <= 0 || !note}
             >
               {operationType === "add" ? "Tambah Kas" : "Ambil Kas"}
             </Button>

@@ -1,7 +1,7 @@
 export interface OrderHistoryResponse {
     success: boolean;
     message: string;
-    data:    Data;
+    data:    HistoryOrder;
 }
 
 export interface OrderHistoryInput {
@@ -13,10 +13,12 @@ export interface OrderHistoryInput {
     search?: string | null; // nullable, string dengan panjang maksimum 255 karakter
   }
 
-export interface Data {
-    total_orders:  number;
-    total_revenue: string;
-    orders:        Orders;
+export interface HistoryOrder {
+    total_orders:   number;
+    total_revenue:  string;
+    date_from:      string;
+    date_to:        string;
+    orders:         OrderItem[];
 }
 
 export interface Orders {
@@ -48,7 +50,7 @@ export interface OrderItem {
     total_paid:     string
     change:         string
 
-    status:         string;
+    status:         "pending" | "completed" | "cancelled";
     payment_method: string;
     created_at:     string;
     items:          Item[];
@@ -58,7 +60,7 @@ export interface Item {
     product:  string;
     quantity: number;
     price:    string;
-    total:    number;
+    total:    string;
 }
 
 export interface Link {

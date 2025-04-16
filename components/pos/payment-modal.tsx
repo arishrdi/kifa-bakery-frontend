@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 import Image from "next/image"
 import { PrintInvoice } from "./print-invoice"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface PaymentModalProps {
   open: boolean
@@ -28,14 +29,17 @@ interface PaymentModalProps {
   tax: number,
   cart: Array<{ id: number; name: string; price: number; quantity: number }>
   onSuccess: () => void
+  refetchBalance: any
 }
 
-export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }: PaymentModalProps) {
+export function PaymentModal({ open, onOpenChange, total, refetchBalance,cart, onSuccess, tax }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>("tunai")
   const [amountPaid, setAmountPaid] = useState<string>("")
   const [cardNumber, setCardNumber] = useState<string>("")
   const [processing, setProcessing] = useState<boolean>(false)
   const [completed, setCompleted] = useState<boolean>(false)
+
+  const queryClient = useQueryClient();
 
   const { user } = useAuth();
   const { mutate: createOrderMutation, isPending: isCreatingOrder, isSuccess: isSuccessOrder } = createOrder();
@@ -67,6 +71,12 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
         invalidate(['orders-history', `${user.outlet_id}`])
         invalidate(['cash-register', `${user.outlet_id}`])
 
+        
+        // invalidate(['cash-register', `${user.outlet_id}`])
+
+
+        refetchBalance()
+
         setCompleted(true)
         setTimeout(() => {
           onSuccess()
@@ -76,7 +86,8 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
           setCardNumber("")
           onOpenChange(false)
           // PrintInvoice({cashierName: user.name || "Kasir", order=data})
-          PrintInvoice({ cashierName: user.name || "Kasir", order: data.data });
+          // PrintInvoice({ cashierName: user.name || "Kasir", order: data.data });
+          // PrintInvoice({ cashierName: user.name || "Kasir", order: {...data.data, outlet: user.outlet.name} });
         }, 1500)
       }
     })
@@ -94,142 +105,146 @@ export function PaymentModal({ open, onOpenChange, total, cart, onSuccess, tax }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle>Pembayaran</DialogTitle>
-          <DialogDescription>Selesaikan transaksi dengan memilih metode pembayaran</DialogDescription>
-        </DialogHeader>
+  <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-2">
+    <DialogHeader className="px-3 pt-3">
+      <DialogTitle className="text-sm">Pembayaran</DialogTitle>
+      <DialogDescription className="text-xs">
+        Selesaikan transaksi dengan memilih metode pembayaran
+      </DialogDescription>
+    </DialogHeader>
 
-        {completed ? (
-          <div className="py-6 text-center px-6">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+    {completed ? (
+      <div className="py-4 text-center px-3">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mb-3">
+          <CheckCircle className="h-6 w-6 text-green-600" />
+        </div>
+        <h3 className="text-sm font-medium text-green-700">Pembayaran Berhasil!</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Transaksi telah berhasil diselesaikan</p>
+      </div>
+    ) : (
+      <>
+        <ScrollArea className="flex-1 px-3 overflow-y-scroll">
+          <div className="rounded-md bg-orange-50 p-3 mb-3">
+            <div className="flex items-center justify-between font-medium text-xs">
+              <span>Total Pembayaran</span>
+              <span className="text-base text-orange-600">Rp {total.toLocaleString()}</span>
             </div>
-            <h3 className="text-lg font-medium text-green-700">Pembayaran Berhasil!</h3>
-            <p className="mt-2 text-muted-foreground">Transaksi telah berhasil diselesaikan</p>
+            <div className="text-xs text-muted-foreground mt-1">
+              {cart.length} item dalam transaksi
+            </div>
           </div>
-        ) : (
-          <>
-            <ScrollArea className="flex-1 px-6 overflow-y-scroll">
-              <div className="rounded-md bg-orange-50 p-4 mb-4">
-                <div className="flex items-center justify-between font-medium">
-                  <span>Total Pembayaran</span>
-                  <span className="text-xl text-orange-600">Rp {total.toLocaleString()}</span>
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">{cart.length} item dalam transaksi</div>
+          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mb-3">
+            <div className="flex flex-col space-y-2">
+              <Label className="text-xs font-medium">Metode Pembayaran</Label>
+              <div
+                className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer"
+                onClick={() => setPaymentMethod("tunai")}
+              >
+                <RadioGroupItem value="tunai" id="tunai" />
+                <Banknote className="h-3 w-3 text-orange-500 ml-1 mr-2" />
+                <Label htmlFor="tunai" className="cursor-pointer flex-1 text-xs">
+                  Tunai
+                </Label>
               </div>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mb-4">
-                <div className="flex flex-col space-y-3">
-                  <Label className="font-medium mb-1">Metode Pembayaran</Label>
-                  <div
-                    className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer"
-                    onClick={() => setPaymentMethod("tunai")}
-                  >
-                    <RadioGroupItem value="tunai" id="tunai" />
-                    <Banknote className="h-4 w-4 text-orange-500 ml-1 mr-2" />
-                    <Label htmlFor="tunai" className="cursor-pointer flex-1">
-                      Tunai
-                    </Label>
-                  </div>
-                  <div
-                    className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer"
-                    onClick={() => setPaymentMethod("qris")}
-                  >
-                    <RadioGroupItem value="qris" id="qris" />
-                    <CreditCard className="h-4 w-4 text-orange-500 ml-1 mr-2" />
-                    <Label htmlFor="qris" className="cursor-pointer flex-1">
-                      QRIS
-                    </Label>
-                  </div>
-                </div>
-              </RadioGroup>
-              {paymentMethod === "tunai" && (
-                <div className="space-y-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="amount">Jumlah Uang Diterima</Label>
-                    <Input
-                      id="amount"
-                      placeholder="Masukkan jumlah uang"
-                      value={amountPaid ? `Rp ${Number.parseInt(amountPaid).toLocaleString()}` : ""}
-                      onChange={handleAmountChange}
-                      className="border-orange-200"
-                    />
-                  </div>
+              <div
+                className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer"
+                onClick={() => setPaymentMethod("qris")}
+              >
+                <RadioGroupItem value="qris" id="qris" />
+                <CreditCard className="h-3 w-3 text-orange-500 ml-1 mr-2" />
+                <Label htmlFor="qris" className="cursor-pointer flex-1 text-xs">
+                  QRIS
+                </Label>
+              </div>
+            </div>
+          </RadioGroup>
+          {paymentMethod === "tunai" && (
+            <div className="space-y-2">
+              <div className="grid gap-1">
+                <Label htmlFor="amount" className="text-xs">
+                  Jumlah Uang Diterima
+                </Label>
+                <Input
+                  id="amount"
+                  placeholder="Masukkan jumlah uang"
+                  value={amountPaid ? `Rp ${Number.parseInt(amountPaid).toLocaleString()}` : ""}
+                  onChange={handleAmountChange}
+                  className="border-orange-200 text-xs"
+                />
+              </div>
 
-                  {amountPaid && (
-                    <div className="rounded-md bg-muted p-3">
-                      <div className="flex justify-between mb-1">
-                        <span>Total</span>
-                        <span>Rp {total.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between mb-1">
-                        <span>Dibayar</span>
-                        <span>Rp {amountPaidValue.toLocaleString()}</span>
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="flex justify-between font-medium">
-                        <span>Kembalian</span>
-                        <span className={change < 0 ? "text-red-500" : "text-green-600"}>
-                          Rp {change < 0 ? `(${Math.abs(change).toLocaleString()})` : change.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {paymentMethod === "qris" && (
-                <div className="space-y-3">
-                  <div className="flex justify-center p-4 bg-muted rounded-md">
-                    <div className="w-60 h-60 bg-white p-2 rounded-md flex items-center justify-center">
-                      <Image
-                        src={user?.outlet.qris_url ?? '/placeholder-logo.png'}
-                        alt="QRIS Code"
-                        width={700}
-                        height={700}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+              {amountPaid && (
+                <div className="rounded-md bg-muted p-2">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs">Total</span>
+                    <span className="text-xs">Rp {total.toLocaleString()}</span>
                   </div>
-                  <div className="text-center text-sm text-muted-foreground">
-                    Scan kode QR di atas menggunakan aplikasi e-wallet atau mobile banking Anda
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs">Dibayar</span>
+                    <span className="text-xs">Rp {amountPaidValue.toLocaleString()}</span>
+                  </div>
+                  <Separator className="my-1" />
+                  <div className="flex justify-between font-medium text-xs">
+                    <span>Kembalian</span>
+                    <span className={change < 0 ? "text-red-500" : "text-green-600"}>
+                      Rp {change < 0 ? `(${Math.abs(change).toLocaleString()})` : change.toLocaleString()}
+                    </span>
                   </div>
                 </div>
               )}
-              <div className="h-4"></div>
-            </ScrollArea>
+            </div>
+          )}
+          {paymentMethod === "qris" && (
+            <div className="space-y-2">
+              <div className="flex justify-center p-3 bg-muted rounded-md">
+                <div className="w-48 h-48 bg-white p-1 rounded-md flex items-center justify-center">
+                  <Image
+                    src={user?.outlet.qris_url ?? '/placeholder-logo.png'}
+                    alt="QRIS Code"
+                    width={700}
+                    height={700}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+              <div className="text-center text-xs text-muted-foreground">
+                Scan kode QR di atas menggunakan aplikasi e-wallet atau mobile banking Anda
+              </div>
+            </div>
+          )}
+          <div className="h-2"></div>
+        </ScrollArea>
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 mt-4 px-6 py-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="border-orange-200"
-                disabled={processing}
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                onClick={handlePayment}
-                className="bg-orange-500 hover:bg-orange-600"
-                disabled={
-                  processing ||
-                  (paymentMethod === "tunai" && !sufficientAmount)
-                }
-              >
-                {isCreatingOrder ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  "Bayar Sekarang"
-                )}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 mt-3 px-3 py-3 border-t">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="border-orange-200 text-xs"
+            disabled={processing}
+          >
+            Batal
+          </Button>
+          <Button
+            type="submit"
+            onClick={handlePayment}
+            className="bg-orange-500 hover:bg-orange-600 text-xs"
+            disabled={processing || (paymentMethod === "tunai" && !sufficientAmount)}
+          >
+            {isCreatingOrder ? (
+              <>
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Memproses...
+              </>
+            ) : (
+              "Bayar"
+            )}
+          </Button>
+        </DialogFooter>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
+
   )
 }
 

@@ -10,7 +10,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
+// import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 
 export default function DashboardLayout({
   children,

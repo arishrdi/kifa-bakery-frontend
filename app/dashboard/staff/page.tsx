@@ -26,16 +26,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Edit, MoreHorizontal, Plus, Trash2, UserPlus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { getAllOutlets } from "@/services/outlet-service";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Staff, StaffDetail, StaffInput } from "@/types/staff";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { StaffDetail, StaffInput } from "@/types/staff";
 import { createStaff, deleteStaff, getAllStaffByOutlet, updateStaff } from "@/services/staff-service";
 import { useOutlet } from "@/contexts/outlet-context";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "@/hooks/use-toast";
 
 export default function ShiftsPage() {
   const searchParams = useSearchParams();
@@ -53,10 +55,11 @@ export default function ShiftsPage() {
     role: "",
     start_time: "",
     end_time: "",
+    outlet_id: currentOutlet?.id || 1,
   }
 
-  // const [date, setDate] = useState<Date>(new Date());
   const [formData, setFormData] = useState<StaffInput>(initialFormData);
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -79,9 +82,18 @@ export default function ShiftsPage() {
         setIsAddStaffDialogOpen(false);
         refetchStaffs();
         setFormData(initialFormData);
+        toast({
+          title: "Staff berhasil ditambahkan",
+          description: "Staff baru telah berhasil ditambahkan ke sistem.",
+          variant: "default",
+        });
       },
-      onError: (error) => {
-        console.error(error);
+      onError: () => {
+        toast({
+          title: "Gagal menambahkan staff",
+          description: "Terjadi kesalahan saat menambahkan staff baru.",
+          variant: "destructive",
+        });
       },
     });
   };
@@ -97,9 +109,18 @@ export default function ShiftsPage() {
         refetchStaffs();
         setFormData(initialFormData);
         setSelectedStaff(null);
+        toast({
+          title: "Perubahan disimpan",
+          description: "Data staff telah berhasil diperbarui.",
+          variant: "default",
+        });
       },
-      onError: (error) => {
-        console.error(error);
+      onError: () => {
+        toast({
+          title: "Gagal menyimpan perubahan",
+          description: "Terjadi kesalahan saat memperbarui data staff.",
+          variant: "destructive",
+        });
       },
     });
   }
@@ -111,29 +132,21 @@ export default function ShiftsPage() {
       onSuccess: () => {
         setIsDeleteStaffDialogOpen(false);
         refetchStaffs();
-      }
+        toast({
+          title: "Staff berhasil dihapus",
+          description: "Staff telah dihapus dari sistem.",
+          variant: "default",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Gagal menghapus staff",
+          description: "Terjadi kesalahan saat menghapus staff.",
+          variant: "destructive",
+        });
+      },
     });
   }
-
-  // Format times to HH:MM for time input
-  // const formatTimeForInput = (timeString: string | undefined | null): string => {
-  //   if (!timeString) return "";
-
-  //   // If it's already in HH:MM format, return it
-  //   if (/^\d{2}:\d{2}$/.test(timeString)) return timeString;
-
-  //   // Try to extract time from datetime format or other formats
-  //   try {
-  //     const date = new Date(timeString);
-  //     if (!isNaN(date.getTime())) {
-  //       return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  //     }
-  //   } catch (error) {
-  //     console.error("Error parsing time:", error);
-  //   }
-
-  //   return "";
-  // };
 
   const formatTimeForInput = (time: string | null | undefined): string => {
     if (!time) return '';
@@ -143,16 +156,13 @@ export default function ShiftsPage() {
 
   const handleEditClick = (staff: StaffDetail) => {
     setSelectedStaff(staff);
-
-    const formattedStaff = {
+    setFormData({
       ...staff,
-      start_time: formatTimeForInput(staff.last_shift.start_time),
-      end_time: formatTimeForInput(staff.last_shift.end_time),
-    };
-
-    console.log({ formattedStaff })
-
-    setFormData({...formattedStaff, password: formData.password});
+      start_time: formatTimeForInput(staff.last_shift?.start_time),
+      end_time: formatTimeForInput(staff.last_shift?.end_time),
+      password: "", // Don't pre-fill password for security
+      outlet_id: staff.outlet_id || currentOutlet?.id || 1,
+    });
     setIsEditStaffDialogOpen(true);
   }
 
@@ -202,6 +212,7 @@ export default function ShiftsPage() {
                       className="col-span-3"
                       value={formData.name || ""}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -215,6 +226,8 @@ export default function ShiftsPage() {
                       className="col-span-3"
                       value={formData.email || ""}
                       onChange={handleInputChange}
+                      required
+                      type="email"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -224,11 +237,12 @@ export default function ShiftsPage() {
                     <Input
                       id="password"
                       name="password"
-                      type="text"
+                      type="password"
                       placeholder="Password"
                       className="col-span-3"
                       value={formData.password || ""}
                       onChange={handleInputChange}
+                      required={!isEditStaffDialogOpen}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -237,7 +251,9 @@ export default function ShiftsPage() {
                     </Label>
                     <Select
                       value={formData.role || ""}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                      required
+                    >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Pilih peran" />
                       </SelectTrigger>
@@ -258,6 +274,7 @@ export default function ShiftsPage() {
                       className="col-span-3"
                       value={formData.start_time || ""}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -271,6 +288,7 @@ export default function ShiftsPage() {
                       className="col-span-3"
                       value={formData.end_time || ""}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -280,7 +298,9 @@ export default function ShiftsPage() {
                     <div className="col-span-3">
                       <Select
                         value={formData.outlet_id?.toString() || ""}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, outlet_id: parseInt(value) }))}>
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, outlet_id: parseInt(value) }))}
+                        required
+                      >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Pilih outlet" />
                         </SelectTrigger>
@@ -298,12 +318,27 @@ export default function ShiftsPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => {
-                    setIsAddStaffDialogOpen(false);
-                    setIsEditStaffDialogOpen(false);
-                  }}>Batal</Button>
-                  <Button type="submit" disabled={isCreating || isUpdating}>
-                    {isEditStaffDialogOpen ? "Simpan Perubahan" : "Simpan"}
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsAddStaffDialogOpen(false);
+                      setIsEditStaffDialogOpen(false);
+                    }}
+                  >
+                    Batal
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isCreating || isUpdating}
+                  >
+                    {isCreating || isUpdating ? (
+                      <span className="animate-pulse">Menyimpan...</span>
+                    ) : isEditStaffDialogOpen ? (
+                      "Simpan Perubahan"
+                    ) : (
+                      "Simpan"
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
@@ -336,8 +371,9 @@ export default function ShiftsPage() {
                 <Button
                   variant="destructive"
                   onClick={handleDeleteStaff}
+                  disabled={delStaff.isPending}
                 >
-                  Hapus Staff
+                  {delStaff.isPending ? "Menghapus..." : "Hapus Staff"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -345,57 +381,68 @@ export default function ShiftsPage() {
         </div>
       </div>
 
-      
-        <Card>
-          <CardHeader>
-            <CardTitle>Daftar Staff</CardTitle>
-            <CardDescription>Kelola staff dan penugasan shift</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Peran</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
+      <Card>
+        <CardHeader>
+          <CardTitle>Daftar Staff</CardTitle>
+          <CardDescription>Kelola staff dan penugasan shift</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama</TableHead>
+                <TableHead>Peran</TableHead>
+                <TableHead>Shift</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {staffs?.data.map((staff) => (
+                <TableRow key={staff.id}>
+                  <TableCell className="font-medium">{staff.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
+                      {staff.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {staff.last_shift?.start_time ? (
+                      <span className="text-sm">
+                        {staff.last_shift.start_time} - {staff.last_shift.end_time}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Belum ada shift</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Buka menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEditClick(staff)}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600" 
+                          onClick={() => handleDeleteClick(staff)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staffs?.data.map((staff) => (
-                  <TableRow key={staff.id}>
-                    <TableCell className="font-medium">{staff.name}</TableCell>
-                    <TableCell>{staff.role}</TableCell>
-                    <TableCell>
-                      {staff.last_shift?.start_time ? `${staff.last_shift.start_time} - ${staff.last_shift.end_time}` : 'Belum ada shift'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Buka menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditClick(staff)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(staff)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const loginMutation = loginUser();
   const logoutMutation = logOutUser();
+  const profileMutation = getUser()
   const { data, isLoading: isUserLoading, error } = getUser();
 
   useEffect(() => {
@@ -64,6 +65,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           });
         },
       });
+
+      // const user = await
       setUser(response.data.user);
       router.push("/dashboard");
     } catch (error) {

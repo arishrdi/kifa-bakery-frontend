@@ -86,6 +86,7 @@ export default function ProductsContent() {
 
     return parseInt(processedValue, 10).toString();
   };
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
@@ -126,6 +127,9 @@ export default function ProductsContent() {
     if (file) {
       setPreviewImage(URL.createObjectURL(file))
       setFormData(prev => ({ ...prev, image: file }))
+    } else {
+      setPreviewImage(null)
+      setFormData(prev => ({ ...prev, image: null }))
     }
   }
 
@@ -135,8 +139,12 @@ export default function ProductsContent() {
     const formDataToSend = new FormData()
     formDataToSend.append('name', formData.name)
     formDataToSend.append('sku', formData.sku)
-    formDataToSend.append('image', formData.image)
-    formDataToSend.append('description', formData.description)
+    if (formData.image) {
+      formDataToSend.append('image', formData.image)
+    }
+    if (formData.description) {
+      formDataToSend.append('description', formData.description)
+    }
     formDataToSend.append('price', formData.price.toString())
     formDataToSend.append('category_id', formData.category_id.toString())
     formDataToSend.append('is_active', formData.is_active ? '1' : '0');
@@ -146,8 +154,6 @@ export default function ProductsContent() {
       formDataToSend.append('outlet_ids[]', id.toString());
     });
 
-    console.log("create", formDataToSend)
-
     try {
       postProduct.mutate(formDataToSend, {
         onSuccess: () => {
@@ -155,10 +161,20 @@ export default function ProductsContent() {
           setFormData(initialFormData)
           setPreviewImage(null)
           refetchProducts()
+          toast({ 
+            title: "Produk Berhasil Ditambahkan!", 
+            description: "Produk baru telah berhasil disimpan ke sistem.",
+            variant: "default"
+          })
+        },
+        onError: () => {
+          toast({ 
+            title: "Gagal Menyimpan Produk!", 
+            description: "Terjadi kesalahan saat mencoba menambahkan produk. Silakan cek inputan.", 
+            variant: "destructive" 
+          })
         }
       })
-      console.log('FormData:', Object.fromEntries(formDataToSend))
-
     } catch (error: any) {
       console.error('Error creating product:', error.message)
     }
@@ -170,14 +186,15 @@ export default function ProductsContent() {
     const formDataToSend = new FormData();
     formDataToSend.append('name', formData.name);
     formDataToSend.append('sku', formData.sku);
-    formDataToSend.append('description', formData.description);
+    if (formData.description) {
+      formDataToSend.append('description', formData.description);
+    }
     formDataToSend.append('price', formData.price);
     formDataToSend.append('category_id', formData.category_id.toString());
     formDataToSend.append('is_active', formData.is_active ? '1' : '0');
     formDataToSend.append('quantity', formData.quantity);
     formDataToSend.append('min_stock', formData.min_stock);
 
-    // Handle image update
     if (formData.image) {
       formDataToSend.append('image', formData.image);
     }
@@ -185,8 +202,6 @@ export default function ProductsContent() {
     formData.outlet_ids.forEach((id) => {
       formDataToSend.append('outlet_ids[]', id.toString());
     });
-
-    console.log("update", formDataToSend)
 
     try {
       updProduct.mutate(
@@ -197,9 +212,18 @@ export default function ProductsContent() {
             setFormData(initialFormData);
             setPreviewImage(null);
             refetchProducts();
+            toast({ 
+              title: "Perubahan Disimpan!", 
+              description: "Produk telah berhasil diperbarui.",
+              variant: "default"
+            })
           },
           onError: () => {
-            toast({title: "Terjadi kesalahan ketika update produk", variant: 'destructive'})
+            toast({ 
+              title: "Gagal Memperbarui Produk!", 
+              description: "Pembaruan produk tidak berhasil. Cek inputan atau koneksi internet.", 
+              variant: 'destructive' 
+            })
           }
         }
       );
@@ -207,8 +231,6 @@ export default function ProductsContent() {
       console.error('Error updating product:', error.message);
     }
   };
-  // console.log("edit", selectedProduct)
-
 
   const handleEditClick = (product: Product) => {
     setSelectedProduct(product);
@@ -218,7 +240,7 @@ export default function ProductsContent() {
       description: product.description || '',
       price: product.price.toString(),
       category_id: product.category.id,
-      image: null, // Tetap null karena kita akan handle file terpisah
+      image: null,
       is_active: product.is_active,
       outlet_ids: product.outlets.map(outlet => outlet.id),
       quantity: product.quantity.toString(),
@@ -241,12 +263,23 @@ export default function ProductsContent() {
       {
         onSuccess: () => {
           setIsAdjustStockDialogOpen(false)
+          setInventoryFormData(initialInventoryFormData)
           refetchProducts()
+          toast({
+            title: "Stok Berhasil Disesuaikan!",
+            description: "Perubahan stok telah berhasil disimpan.",
+            variant: "default"
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Gagal Menyesuaikan Stok!",
+            description: "Terjadi kesalahan saat mencoba menyesuaikan stok.",
+            variant: "destructive"
+          })
         }
       }
     )
-
-    console.log("adjust stock", selectedProduct)
   }
 
   const handleDeleteClick = (product: Product) => {
@@ -261,12 +294,28 @@ export default function ProductsContent() {
       onSuccess: () => {
         refetchProducts();
         setIsDeleteDialogOpen(false)
+        toast({
+          title: "Produk Berhasil Dihapus!",
+          description: "Produk telah berhasil dihapus dari sistem.",
+          variant: "default"
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Gagal Menghapus Produk!",
+          description: "Terjadi kesalahan saat mencoba menghapus produk. Silakan coba lagi.",
+          variant: "destructive"
+        })
       }
     });
   }
 
   const handleAdjustStockClick = (product: Product) => {
     setSelectedProduct(product)
+    setInventoryFormData({
+      ...initialInventoryFormData,
+      product_id: product.id
+    })
     setIsAdjustStockDialogOpen(true)
   }
 
@@ -320,17 +369,20 @@ export default function ProductsContent() {
                     <h3 className="font-medium text-base">Informasi Dasar</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label >Nama Produk</Label>
+                        <Label htmlFor="name">Nama Produk</Label>
                         <Input
+                          id="name"
                           name="name"
                           value={formData.name}
                           onChange={handleInputChange}
                           placeholder="Contoh: Es Kopi Susu"
+                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>SKU Produk</Label>
+                        <Label htmlFor="sku">SKU Produk</Label>
                         <Input
+                          id="sku"
                           name="sku"
                           value={formData.sku}
                           onChange={handleInputChange}
@@ -340,13 +392,14 @@ export default function ProductsContent() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Deskripsi Produk</Label>
+                      <Label htmlFor="description">Deskripsi Produk</Label>
                       <Textarea
+                        id="description"
                         name="description"
                         value={formData.description}
                         onChange={handleInputChange}
                         rows={3}
-                        placeholder="Deskripsi singkat tentang produk..."
+                        placeholder="Deskripsi singkat tentang produk... (opsional)"
                         className="resize-none"
                       />
                     </div>
@@ -357,23 +410,26 @@ export default function ProductsContent() {
                     <h3 className="font-medium text-base">Harga & Kategori</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Harga Jual</Label>
+                        <Label htmlFor="price">Harga Jual</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">Rp</span>
                           <Input
+                            id="price"
                             name="price"
                             type="text"
                             value={formData.price}
                             onChange={handleInputChange}
                             className="pl-10"
+                            required
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label>Kategori</Label>
+                        <Label htmlFor="category_id">Kategori</Label>
                         <Select
                           value={formData.category_id.toString()}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: parseInt(value) }))}
+                          required
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih kategori" />
@@ -397,21 +453,25 @@ export default function ProductsContent() {
                     <h3 className="font-medium text-base">Manajemen Stok</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Stok Awal</Label>
+                        <Label htmlFor="quantity">Stok Awal</Label>
                         <Input
+                          id="quantity"
                           name="quantity"
                           type="text"
                           value={formData.quantity}
                           onChange={handleInputChange}
+                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label >Stok Minimum</Label>
+                        <Label htmlFor="min_stock">Stok Minimum</Label>
                         <Input
+                          id="min_stock"
                           name="min_stock"
                           type="text"
                           value={formData.min_stock}
                           onChange={handleInputChange}
+                          required
                         />
                       </div>
                     </div>
@@ -424,6 +484,7 @@ export default function ProductsContent() {
                       {outlets?.data.map((outlet) => (
                         <div key={outlet.id} className="flex items-center gap-3">
                           <Checkbox
+                            id={`outlet-${outlet.id}`}
                             checked={formData.outlet_ids.includes(outlet.id)}
                             onCheckedChange={() => handleCheckboxChange(outlet.id)}
                           />
@@ -462,7 +523,7 @@ export default function ProductsContent() {
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground text-center">
-                          Format: JPEG/PNG
+                          Format: JPEG/PNG (opsional)
                           <br />
                           Maks. 2MB
                         </span>
@@ -470,10 +531,10 @@ export default function ProductsContent() {
 
                       <div className="flex-1 space-y-3">
                         <div className="space-y-2">
-                          <Label>Upload Gambar</Label>
+                          <Label htmlFor="image">Upload Gambar</Label>
                           <Input
-                            type="file"
                             id="image"
+                            type="file"
                             accept="image/*"
                             onChange={handleImageChange}
                             className="file:text-foreground file:bg-transparent file:border-0"
@@ -519,7 +580,7 @@ export default function ProductsContent() {
               </form>
             </DialogContent>
           </Dialog>
-          <Dialog open={isAdjustStockDialogOpen} onOpenChange={setIsAdjustStockDialogOpen}>
+          {/* <Dialog open={isAdjustStockDialogOpen} onOpenChange={setIsAdjustStockDialogOpen}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Sesuaikan Stok</DialogTitle>
@@ -537,7 +598,6 @@ export default function ProductsContent() {
                         <Input
                           type="text"
                           value={selectedProduct?.name}
-
                           disabled
                         />
                       </div>
@@ -555,26 +615,28 @@ export default function ProductsContent() {
                     <h3 className="font-medium text-base">Penyesuaian Stok</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Nilai + / -</Label>
+                        <Label htmlFor="quantity_change">Nilai + / -</Label>
                         <Input
+                          id="quantity_change"
                           type="number"
                           name="quantity_change"
                           value={inventoryFormData.quantity_change}
                           onChange={handleInputChange}
                           placeholder="Masukkan nilai penambahan/pengurangan"
                           onKeyPress={(e) => {
-                            // Izinkan tanda minus hanya di awal atau untuk bilangan negatif
                             if (e.key === '-' && e.currentTarget.value.includes('-')) {
                               e.preventDefault();
                             }
                           }}
+                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Tipe</Label>
+                        <Label htmlFor="type">Tipe</Label>
                         <Select
                           value={inventoryFormData.type}
                           onValueChange={(value) => setInventoryFormData(prev => ({ ...prev, type: value }))}
+                          required
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Pilih tipe" />
@@ -588,8 +650,9 @@ export default function ProductsContent() {
                         </Select>
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>Keterangan</Label>
+                        <Label htmlFor="notes">Keterangan</Label>
                         <Textarea
+                          id="notes"
                           name="notes"
                           value={inventoryFormData.notes}
                           onChange={handleInputChange}
@@ -598,7 +661,6 @@ export default function ProductsContent() {
                       </div>
                     </div>
                   </div>
-
                 </div>
                 <DialogFooter className="border-t pt-4">
                   <Button
@@ -615,7 +677,7 @@ export default function ProductsContent() {
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog>
+          </Dialog> */}
         </div>
       </div>
 
@@ -641,7 +703,6 @@ export default function ProductsContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-
               {products?.data.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>{product.sku}</TableCell>
@@ -657,7 +718,7 @@ export default function ProductsContent() {
                       <div>
                         <div className="font-medium">{product.name}</div>
                         <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {product.description}
+                          {product.description || 'Tidak ada deskripsi'}
                         </div>
                       </div>
                     </div>
@@ -702,9 +763,9 @@ export default function ProductsContent() {
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-orange-500" onClick={() => handleAdjustStockClick(product)}>
+                        {/* <DropdownMenuItem className="text-orange-500" onClick={() => handleAdjustStockClick(product)}>
                           <Plus className="mr-2 h-4 w-4" /> Sesuaikan Stok
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(product)}>
                           <Trash2 className="mr-2 h-4 w-4" /> Hapus
@@ -726,12 +787,11 @@ export default function ProductsContent() {
         </CardContent>
       </Card>
 
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogTitle>Konfirmasi Hapus Produk</DialogTitle>
             <DialogDescription>
               Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
@@ -739,15 +799,21 @@ export default function ProductsContent() {
           <div className="py-4">
             {selectedProduct && (
               <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-md bg-orange-100 flex items-center justify-center">
+                  <img
+                    src={selectedProduct.image || "/placeholder.svg"}
+                    alt={selectedProduct.name}
+                    className="h-12 w-12 rounded-md object-cover"
+                  />
+                </div>
                 <div>
                   <div className="font-medium">{selectedProduct.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {selectedProduct.description}
+                    SKU: {selectedProduct.sku || '-'}
                   </div>
                 </div>
               </div>
             )}
-            
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
@@ -756,14 +822,12 @@ export default function ProductsContent() {
             <Button
               variant="destructive"
               onClick={handleDeleteProduct}
-              // disabled={selectedCategory ? selectedCategory.products_count > 0 : false}
             >
-              Hapus Kategori
+              Hapus Produk
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-
   )
 }

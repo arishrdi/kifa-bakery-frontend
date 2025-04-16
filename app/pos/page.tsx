@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CreditCard, Clock, Search, ShoppingCart, Trash2, User, History, LogOut, Menu } from "lucide-react"
+import { CreditCard, Clock, Search, ShoppingCart, Trash2, User, History, LogOut, Menu, PackagePlus } from "lucide-react"
 import { PaymentModal } from "@/components/pos/payment-modal"
 import { TransactionHistoryModal } from "@/components/pos/transaction-history-modal"
 import { ProductGrid } from "@/components/pos/product-grid"
@@ -20,6 +20,7 @@ import Image from "next/image"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { getCashBalanceByOutlet } from "@/services/cash-transaction-service"
 import { Product } from "@/types/product"
+import AdjustStock from "@/components/pos/adjust-stock"
 
 export default function POSPage() {
   const [cart, setCart] = useState<Array<{ id: number; name: string; price: number; quantity: number }>>([])
@@ -34,7 +35,7 @@ export default function POSPage() {
   const outletId = Number(user?.outlet_id) || 1
 
   const queryCashBalance = getCashBalanceByOutlet(outletId)
-  const { data: cashBalance } = queryCashBalance()
+  const { data: cashBalance, refetch: refetchBalance } = queryCashBalance()
 
   const query = getAllProductsByOutlet(outletId)
   const { data: products, isLoading, refetch: refetchProducts } = query()
@@ -123,9 +124,10 @@ export default function POSPage() {
   // Calculate subtotal
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  // Calculate tax (11%)
-  const tax = subtotal ? subtotal * (user?.outlet.tax || 0 / 100) : 0;
-  const total = subtotal + tax
+  // Calculate tax
+  const taxRate = (user?.outlet.tax ?? 0) / 100;
+  const tax = subtotal ? subtotal * taxRate : 0;
+  const total = subtotal + tax;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -133,13 +135,12 @@ export default function POSPage() {
       <header className="sticky top-0 z-10 border-b bg-white px-4 py-3 shadow-sm dark:bg-gray-950">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            {/* <ShoppingCart className="h-6 w-6 text-orange-500 mr-2" /> */}
             <Image src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" alt="Logo kifa" width={50} height={50} className="w-7 mr-4" />
             <h1 className="text-xl font-bold text-orange-500">{user?.outlet?.name}</h1>
           </div>
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
-
+            <AdjustStock products={localProducts} />
             <CashRegister outletId={outletId} cashBalance={Number(cashBalance?.data.balance) || 0} />
             <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
               <Clock className="mr-2 h-4 w-4" />
@@ -180,21 +181,20 @@ export default function POSPage() {
                     </div>
                     <Badge className="bg-orange-100 text-orange-800 w-full justify-start mt-1">
                       <Clock className="mr-2 h-3 w-3" />
-                      Shift: ({user?.last_shift.start_time} - {user?.last_shift.end_time})
+                      Shift: ({user?.last_shift?.start_time} - {user?.last_shift?.end_time})
                     </Badge>
                   </div>
 
                   <div className="p-2">
                     <CashRegister outletId={outletId} cashBalance={Number(cashBalance?.data.balance) || 0} />
                   </div>
-
                   <Separator />
 
                   <Button
                     variant="outline"
                     size="sm"
                     className="w-full border-orange-200 hover:bg-orange-100 hover:text-orange-700"
-                    onClick={() => (window.location.href = "/login")}
+                    onClick={logout}
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
@@ -340,7 +340,7 @@ export default function POSPage() {
                   <span>Rp {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Pajak ({parseFloat(user?.outlet.tax)}%)</span>
+                  <span className="text-muted-foreground">Pajak ({parseFloat(user?.outlet?.tax)}%)</span>
                   <span>Rp {tax.toLocaleString()}</span>
                 </div>
                 <Separator className="my-2" />
@@ -383,11 +383,12 @@ export default function POSPage() {
         total={total}
         tax={tax}
         cart={cart}
+        refetchBalance={refetchBalance}
         onSuccess={() => setCart([])}
       />
 
       {/* Transaction History Modal */}
-      <TransactionHistoryModal open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen} />
+      <TransactionHistoryModal open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen} refetchBalance={refetchBalance} />
     </div>
   )
 }
