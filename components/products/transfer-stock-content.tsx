@@ -175,9 +175,9 @@ export default function TransferStokContent() {
                 <TableHead>SKU</TableHead>
                 <TableHead>Produk</TableHead>
                 <TableHead>Kategori</TableHead>
-                <TableHead className="text-right">Harga</TableHead>
+                {/* <TableHead className="text-right">Harga</TableHead> */}
                 <TableHead className="text-right">Stok</TableHead>
-                <TableHead>Status</TableHead>
+                {/* <TableHead>Status</TableHead> */}
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -207,16 +207,16 @@ export default function TransferStokContent() {
                       <span>{product.category.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  {/* <TableCell className="text-right">
                     <div className="font-medium">Rp {product.price.toLocaleString()}</div>
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell className="text-right">
                     <div className={`font-medium ${product.quantity <= product.min_stock ? "text-orange-600" : ""}`}>
                       {product.quantity}
                     </div>
                     <div className="text-xs text-muted-foreground">Min: {product.min_stock}</div>
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     <Badge
                       variant="outline"
                       className={
@@ -227,7 +227,7 @@ export default function TransferStokContent() {
                     >
                       {product.is_active ? "Aktif" : "Tidak Aktif"}
                     </Badge>
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell className="text-right">
                     <Button 
                       size="sm" 

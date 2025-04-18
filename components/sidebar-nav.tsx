@@ -25,6 +25,8 @@ import {
   Cake,
   Filter,
   Truck,
+  UserRound,
+  BookUser,
 } from "lucide-react"
 import {
   Sidebar,
@@ -62,7 +64,6 @@ const navItems = [
     subItems: [
       { name: "Daftar Produk", href: "/dashboard/products?tab=list", icon: ClipboardList },
       { name: "Kategori", href: "/dashboard/products?tab=categories", icon: Filter },
-      { name: "Penyesuaian Stok", href: "/dashboard/products?tab=adjustment", icon: Package },
     ],
   },
   {
@@ -81,6 +82,7 @@ const navItems = [
     icon: Package,
     subItems: [
       // { name: "Atur Stok", href: "/dashboard/stock?tab=adjustment", icon: Package },
+      { name: "Penyesuaian Stok", href: "/dashboard/stock?tab=adjustment", icon: Package },
       { name: "Stok Realtime", href: "/dashboard/stock?tab=realtime", icon: Package },
       { name: "Riwayat Stok", href: "/dashboard/stock?tab=history", icon: History },
       { name: "Stok Per Tanggal", href: "/dashboard/stock?tab=custom", icon: Calendar },
@@ -95,10 +97,21 @@ const navItems = [
   //   subItems: [],
   // },
   {
-    name: "Staff",
-    href: "/dashboard/staff",
+    name: "User",
+    href: "/dashboard/u/",
     icon: Users,
-    subItems: [],
+    subItems: [
+      {
+        name: "Staff",
+        href: "/dashboard/u/staff",
+        icon: UserRound
+      },
+      {
+        name: "Member",
+        href: "/dashboard/u/member",
+        icon: BookUser
+      }
+    ],
   },
   {
     name: "Closing",
@@ -115,9 +128,9 @@ const navItems = [
     href: "/dashboard/reports",
     icon: FileBarChart,
     subItems: [
-      { name: "Penjualan Perhari", href: "/dashboard/reports?tab=dailySales", icon: LineChart },
-      { name: "Penjualan per Item", href: "/dashboard/reports?tab=monthly", icon: FileBarChart },
-      { name: "Penjualan per Kategori", href: "/dashboard/reports?tab=kategori", icon: BarChart },
+      { name: "Perhari", href: "/dashboard/reports?tab=dailySales", icon: LineChart },
+      { name: "Per Item", href: "/dashboard/reports?tab=monthly", icon: FileBarChart },
+      { name: "Per Kategori", href: "/dashboard/reports?tab=kategori", icon: BarChart },
       { name: "Stok", href: "/dashboard/reports?tab=stock", icon: Package },
     ],
   },

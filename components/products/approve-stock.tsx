@@ -26,11 +26,27 @@ export default function ApproveStock() {
     const rejectStock = adminRejectInventory()
 
     const handleApprove = (inventoryId: number) => {
-        approveStock.mutate({ inventory_history_id: inventoryId }, { onSuccess: () => { refetchInventory(), toast({ title: "Udah di approve" }) } })
+        approveStock.mutate({ inventory_history_id: inventoryId }, {
+            onSuccess: () => {
+                refetchInventory(),
+                    toast({
+                        title: "Stok Disetujui",
+                        description: "Permintaan perubahan stok telah berhasil disetujui."
+                    })
+            }
+        })
     }
 
     const handleReject = (inventoryId: number) => {
-        rejectStock.mutate({ inventory_history_id: inventoryId }, { onSuccess: () => { refetchInventory(), toast({ title: "Ditolak" }) } })
+        rejectStock.mutate({ inventory_history_id: inventoryId }, {
+            onSuccess: () => {
+                refetchInventory(),
+                    toast({
+                        title: "Stock ditolak", variant: "destructive",
+                        description: "Penolakan berhasil, stok tidak mengalami perubahan."
+                    })
+            }
+        })
     }
 
     const handleConfirm = () => {
@@ -49,7 +65,6 @@ export default function ApproveStock() {
                 <CardTitle className="flex items-center">
                     <span>Penyesuaian Stok Menunggu Persetujuan</span>
                     <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-                        {/* {pendingAdjustments.length} Permintaan */}
                     </Badge>
                 </CardTitle>
                 <CardDescription>
@@ -66,7 +81,7 @@ export default function ApproveStock() {
                             <Button
                                 variant="outline"
                                 className={cn(
-                                    "justify-start text-left font-normal border-orange-200",
+                                    "justify-start text-left font-normal ",
                                     !date && "text-muted-foreground",
                                 )}
                             >

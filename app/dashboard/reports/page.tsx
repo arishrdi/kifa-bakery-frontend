@@ -6,6 +6,7 @@ import { DateRange } from "react-day-picker"
 import { getCookie } from "cookies-next";
 import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
+import { PackageOpen, PackageCheck, PackageMinus, PackagePlus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -233,6 +234,8 @@ export default function ReportsPage() {
   useEffect(() => {
     if (selectedOutletId) {
       fetchProductsData();
+    } else if (selectedOutletId) {
+      handleStockChange();
     }
   }, [selectedOutletId]);
 
@@ -255,10 +258,20 @@ const [selectedMonth, setSelectedMonth] = useState<string>();
   };
 
   const [inventoryData, setInventoryData] = useState({
-    stockTrend: [],
-    fastMoving: [],
-    slowMoving: [],
-    totalValue: 0
+    data: {
+      products: [],
+      summary: {
+        total_saldo_awal: 0,
+        total_stock_masuk: 0,
+        total_stock_keluar: 0,
+        total_stock_akhir: 0
+      },
+      periode: {
+        start_date: '',
+        end_date: ''
+      },
+      outlet: ''
+    }
   });
 
   const getFormattedDateRange = (date: Date, type: string) => {
@@ -333,85 +346,108 @@ const handlePrintStockReport = () => {
   printFrame.style.left = '-1000px';
   document.body.appendChild(printFrame);
 
-  const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
+  const currentDate = format(new Date(), 'dd/MM/yy - dd/MM/yy', { locale: id });
   const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
+  const periodeText = inventoryData.data?.periode 
+    ? `${format(new Date(inventoryData.data.periode.start_date), 'dd/MM/yy')} - ${format(new Date(inventoryData.data.periode.end_date), 'dd/MM/yy')}`
+    : format(selectedDate, 'dd/MM/yy', { locale: id });
+
+  // Use your actual Kifa Bakery logo base64 here
+  // const logoSrc = ""/>
+
 
   const printContent = `
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Laporan Stok</title>
+      <title>Daftar Jual Per Item Per Pelanggan</title>
       <style>
         body { 
           font-family: Arial, sans-serif; 
-          padding: 20px;
+          padding: 15px;
           color: #333;
         }
         .header { 
-          text-align: center;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #eee;
+          display: flex;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid #000;
+        }
+        .logo-container {
+          width: 80px;
+          height: 80px; /* tambahkan tinggi tetap */
+          margin-right: 15px;
+          display: flex;
+          align-items: center; /* pusatkan vertikal */
+        }
+        .logo {
+          max-width: 100%;
+          height: auto;
+          object-fit: contain;
+          opacity: 0.8;
+        }
+        .header-content {
+          flex-grow: 1;
         }
         .title { 
-          font-size: 24px; 
-          font-weight: bold; 
-          margin-bottom: 10px; 
-        }
-        .subtitle { 
-          color: #666; 
-          font-size: 14px; 
-          margin-bottom: 5px; 
-        }
-        .date {
-          font-size: 12px;
-          color: #666;
-        }
-        .stats-summary {
-          margin: 20px 0;
-          padding: 20px;
-          background-color: #f9f9f9;
-          border-radius: 8px;
-        }
-        .stat-item {
-          margin-bottom: 10px;
-        }
-        .stat-label {
+          font-size: 16px; 
           font-weight: bold;
-          display: inline-block;
-          width: 200px;
+          margin-bottom: 5px;
+        }
+        .address {
+          font-size: 12px;
+          margin-bottom: 2px;
+        }
+        .phone {
+          font-size: 12px;
+        }
+        .periode {
+          text-align: right;
+          font-size: 12px;
         }
         table {
           width: 100%;
           border-collapse: collapse;
-          margin: 20px 0;
+          margin: 15px 0;
+          font-size: 12px;
         }
         th, td {
-          padding: 12px;
+          padding: 8px 12px;
           text-align: left;
-          border-bottom: 1px solid #ddd;
+          border: 1px solid #ddd;
         }
         th { 
-          background-color: #f5f5f5; 
+          background-color:rgb(255, 255, 255); 
           font-weight: bold;
+          text-align: center;
         }
         .text-right { 
           text-align: right; 
         }
-        .footer {
-          margin-top: 40px;
-          padding-top: 20px;
-          border-top: 1px solid #eee;
-          font-size: 12px;
-          color: #666;
+        .text-center {
+          text-align: center;
         }
-        .chart-container {
-          margin: 30px 0;
-          height: 300px;
+        .summary {
+          margin-top: 20px;
+          font-weight: bold;
+          background-color:rgb(255, 255, 255);
+          padding: 10px;
+          border-radius: 4px;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 15px;
+          border-top: 1px solid #eee;
+          font-size: 11px;
+          color: #666;
+          text-align: center;
         }
         @media print {
-          body { -webkit-print-color-adjust: exact; }
-          .stats-summary, th { 
+          body { 
+            padding: 10px;
+            -webkit-print-color-adjust: exact; 
+          }
+          th { 
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
@@ -420,71 +456,64 @@ const handlePrintStockReport = () => {
     </head>
     <body>
       <div class="header">
-        <div class="title">Laporan Stok</div>
-        <div class="subtitle">
-          Outlet: ${outletName}
+        <div class="logo-container">
+          <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" alt="Logo kifa" class="logo" />
         </div>
-        <div class="date">
-          Dicetak pada: ${currentDate}
+        <div class="header-content">
+          <div class="title">DAFTAR JUAL PER ITEM PER PELANGGAN</div>
+          <div class="subtitle">
+            Outlet: ${outletName}
+          </div>
+          <div class="subtitle">
+            Periode: ${periodeText}
+          </div>
+          <div class="date">
+            Dicetak pada: ${currentDate}
+          </div>
+          <div class="phone">0858-6409-3750</div>
+        </div>
+        <div class="periode">
+          PERIODE : ${periodeText}
         </div>
       </div>
 
-      <div class="stats-summary">
-        <div class="stat-item">
-          <span class="stat-label">Total Nilai Stok:</span>
-          <span>Rp ${inventoryData.totalValue.toLocaleString()}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Periode:</span>
-          <span>${format(selectedDate, 'MMMM yyyy', { locale: id })}</span>
-        </div>
-      </div>
-
-      <div class="grid-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div>
-          <h3>Produk Dengan Perputaran Cepat</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Produk</th>
-                <th class="text-right">Perputaran</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${inventoryData.fastMoving.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td class="text-right">${item.turnover}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <div>
-          <h3>Produk Dengan Perputaran Lambat</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Produk</th>
-                <th class="text-right">Perputaran</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${inventoryData.slowMoving.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td class="text-right">${item.turnover}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="text-center">No</th>
+            <th>Produk</th>
+            <th class="text-right">Saldo Awal</th>
+            <th class="text-right">Stock Masuk</th>
+            <th class="text-right">Stock Keluar</th>
+            <th class="text-right">Stock Akhir</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${inventoryData.data?.products?.map((product, index) => `
+            <tr>
+              <td class="text-center">${index + 1}</td>
+              <td>${product.product_name || '-'}</td>
+              <td class="text-right">${product.saldo_awal?.toLocaleString() || '0'}</td>
+              <td class="text-right">${product.stock_masuk?.toLocaleString() || '0'}</td>
+              <td class="text-right">${product.stock_keluar?.toLocaleString() || '0'}</td>
+              <td class="text-right">${product.stock_akhir?.toLocaleString() || '0'}</td>
+            </tr>
+          `).join('') || '<tr><td colspan="6" class="text-center">Tidak ada data stok</td></tr>'}
+        </tbody>
+        <tfoot>
+          <tr class="summary">
+            <td colspan="2">TOTAL</td>
+            <td class="text-right">${inventoryData.data?.summary?.total_saldo_awal?.toLocaleString() || '0'}</td>
+            <td class="text-right">${inventoryData.data?.summary?.total_stock_masuk?.toLocaleString() || '0'}</td>
+            <td class="text-right">${inventoryData.data?.summary?.total_stock_keluar?.toLocaleString() || '0'}</td>
+            <td class="text-right">${inventoryData.data?.summary?.total_stock_akhir?.toLocaleString() || '0'}</td>
+          </tr>
+        </tfoot>
+      </table>
 
       <div class="footer">
-        <p>Laporan ini dibuat secara otomatis oleh sistem.</p>
-        <p>© ${new Date().getFullYear()} Kifa Bakery </p>
+        <p>Laporan ini dibuat secara otomatis oleh Sistem Manajemen Inventori</p>
+        <p>© ${new Date().getFullYear()} Kifa Bakery</p>
       </div>
     </body>
     </html>
@@ -526,6 +555,18 @@ const generateStockChartImage = async () => {
   }
 };
 
+function StatCard({ title, value, icon }) {
+  return (
+    <div className="border rounded-lg p-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
+        {icon}
+      </div>
+      <p className="text-2xl font-bold mt-2">{value}</p>
+    </div>
+  );
+}
+
 //handle print
 const handlePrint = () => {
   if (tab === "monthly") {
@@ -552,7 +593,7 @@ const handleExport = () => {
   }
 };
 
-  // Print penjualan
+  // Print penjualan per item
   const handlePrintMonthlyReport = () => {
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'absolute';
@@ -569,91 +610,108 @@ const handleExport = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Laporan Penjualan</title>
+        <title>Laporan Penjualan per Item</title>
         <style>
           body { 
             font-family: Arial, sans-serif; 
-            padding: 20px;
+            padding: 15px;
             color: #333;
           }
           .header { 
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #eee;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+          }
+          .logo-container {
+            width: 70px;
+            margin-right: 15px;
+          }
+          .logo {
+            width: 100%;
+            height: auto;
+          }
+          .header-content {
+            flex: 1;
           }
           .title { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
+            font-size: 18px; 
+            font-weight: bold;
+            margin-bottom: 5px;
           }
-          .subtitle { 
-            color: #666; 
-            font-size: 14px; 
-            margin-bottom: 5px; 
+          .subtitle {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 3px;
           }
           .date {
             font-size: 12px;
-            color: #666;
+            color: #777;
           }
           .stats-summary {
-            margin: 20px 0;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
+            margin: 15px 0;
+            padding: 15px;
+            background-color:rgb(255, 255, 255);
+            border-radius: 5px;
           }
           .stat-item {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            display: flex;
           }
           .stat-label {
             font-weight: bold;
-            display: inline-block;
-            width: 200px;
+            width: 180px;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 15px 0;
+            font-size: 13px;
           }
           th, td {
-            padding: 12px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
           }
           th { 
-            background-color: #f5f5f5; 
+            background-color:rgb(255, 255, 255);
             font-weight: bold;
           }
           .text-right { 
             text-align: right; 
           }
           .footer {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 20px;
+            padding-top: 15px;
             border-top: 1px solid #eee;
             font-size: 12px;
             color: #666;
+            text-align: center;
           }
           @media print {
-            body { -webkit-print-color-adjust: exact; }
+            body { 
+              padding: 10px;
+              -webkit-print-color-adjust: exact; 
+            }
             .stats-summary, th { 
               -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
             }
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="title">Laporan Penjualan</div>
-          <div class="subtitle">
-            Outlet: ${outletName}
+          <div class="logo-container">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+                 alt="Logo Kifa" 
+                 class="logo">
           </div>
-          <div class="subtitle">
-            Periode: ${startDate} - ${endDate}
-          </div>
-          <div class="date">
-            Dicetak pada: ${currentDate}
+          <div class="header-content">
+            <div class="title">LAPORAN PENJUALAN per Item</div>
+            <div class="subtitle">Outlet: ${outletName}</div>
+            <div class="subtitle">Periode: ${startDate} - ${endDate}</div>
+            <div class="date">Dicetak pada: ${currentDate}</div>
           </div>
         </div>
   
@@ -668,10 +726,10 @@ const handleExport = () => {
           </div>
           <div class="stat-item">
             <span class="stat-label">Total Transaksi:</span>
-            <span>${summaryData.total_orders.toLocaleString()} transaksi</span>
+            <span>${summaryData.total_orders.toLocaleString()}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">Rata-rata per Transaksi:</span>
+            <span class="stat-label">Rata-rata/Transaksi:</span>
             <span>Rp ${summaryData.average_order_value.toLocaleString()}</span>
           </div>
         </div>
@@ -680,12 +738,10 @@ const handleExport = () => {
           <thead>
             <tr>
               <th>SKU</th>
-              <th>Nama Produk</th>
-              <th>Kategori</th>
-              <th class="text-right">Jumlah Order</th>
-              <th class="text-right">Total Kuantitas</th>
-              <th class="text-right">Total Penjualan</th>
-              <th class="text-right">Kontribusi (%)</th>
+              <th>Nama Item</th>
+              <th>Jenis</th>
+              <th class="text-right">Jumlah Satuan</th>
+              <th class="text-right">Total Harga</th>
             </tr>
           </thead>
           <tbody>
@@ -694,18 +750,16 @@ const handleExport = () => {
                 <td>${product.sku}</td>
                 <td>${product.product_name}</td>
                 <td>${product.category_name || '-'}</td>
-                <td class="text-right">${product.order_count.toLocaleString()}</td>
                 <td class="text-right">${product.total_quantity.toLocaleString()}</td>
                 <td class="text-right">Rp ${product.total_sales.toLocaleString()}</td>
-                <td class="text-right">${product.sales_percentage}%</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
   
         <div class="footer">
-          <p>Laporan ini dibuat secara otomatis oleh sistem.</p>
-          <p>© ${new Date().getFullYear()} Kifa Bakery </p>
+          <p>Laporan ini dibuat otomatis oleh Sistem Manajemen Penjualan</p>
+          <p>© ${new Date().getFullYear()} Kifa Bakery</p>
         </div>
       </body>
       </html>
@@ -732,7 +786,7 @@ const handleExport = () => {
     };
   };
 
-    // export penjualan report data to CSV
+    // export penjualan per item
     const handleExportMonthlyCSV = () => {
       if (!productsData || !productsData.length) return;
     
@@ -765,12 +819,12 @@ const handleExport = () => {
       const productsColumns = [
         'No', 
         'SKU', 
-        'Nama Produk', 
-        'Kategori',
-        'Jumlah Order',
-        'Total Kuantitas',
-        'Total Penjualan (Rp)',
-        'Kontribusi (%)'
+        'Nama Item', 
+        'Jenis',
+        // 'Jumlah Order',
+        'Jumlah Satuan',
+        'Total Harga (Rp)',
+        // 'Kontribusi (%)'
       ];
       
       const productsRows = productsData.map((product, index) => [
@@ -781,7 +835,7 @@ const handleExport = () => {
         product.order_count,
         product.total_quantity,
         product.total_sales,
-        product.sales_percentage
+        // product.sales_percentage
       ]);
     
       // Format angka dengan separator ribuan
@@ -790,10 +844,10 @@ const handleExport = () => {
         `"${row[1]}"`, // SKU
         `"${row[2]}"`, // Nama Produk
         `"${row[3]}"`, // Kategori
-        `"${row[4].toLocaleString('id-ID')}"`, // Jumlah Order
+        // `"${row[4].toLocaleString('id-ID')}"`, // Jumlah Order
         `"${row[5].toLocaleString('id-ID')}"`, // Total Kuantitas
         `"Rp ${row[6].toLocaleString('id-ID')}"`, // Total Penjualan
-        `"${row[7]}%"`, // Kontribusi
+        // `"${row[7]}%"`, // Kontribusi
       ]);
     
       // Gabungkan semua bagian
@@ -824,64 +878,71 @@ const handleExport = () => {
 
   //export stock
   const handleExportStockCSV = () => {
-    if (!inventoryData) return;
+    if (!inventoryData?.data) return;
   
-    // Header dengan informasi laporan
-    const reportHeader = [
-      ['LAPORAN ANALISIS STOK'],
-      [`Outlet: ${currentOutlet?.name || 'Semua Outlet'}`],
-      [`Periode: ${format(selectedDate, 'MMMM yyyy', { locale: id })}`],
-      [`Tanggal Ekspor: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
-      [], // Baris kosong untuk spacing
+    // Informasi header dengan logo (placeholder)
+    const companyInfo = [
+      // ['KIFA BAKERY', '', '', '', '', ''],
+      [`Outlet: ${inventoryData.data.outlet || 'Semua Outlet'}`],
+      [`Periode: ${inventoryData.data.periode.start_date} s/d ${inventoryData.data.periode.end_date}`],
+      // ['', '', '', '', '', `Tanggal Ekspor: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
+      [], // Baris kosong
     ];
   
-    // Ringkasan nilai stok
-    const summarySection = [
-      ['RINGKASAN NILAI STOK'],
-      ['Total Nilai Stok', `Rp ${inventoryData.totalValue.toLocaleString('id-ID')}`],
-      [], // Baris kosong untuk spacing
+    // Header tabel
+    const tableHeader = [
+      ['No', 'Produk', 'Saldo Awal', 'Stock Masuk', 'Stock Keluar', 'Stock Akhir'],
     ];
   
-    // Data produk fast moving
-    const fastMovingHeader = ['PRODUK PERPUTARAN CEPAT'];
-    const fastMovingColumns = ['No', 'Nama Produk', 'Perputaran Stok'];
-    const fastMovingRows = inventoryData.fastMoving.map((product, index) => [
+    // Data produk
+    const tableRows = inventoryData.data.products.map((product, index) => [
       index + 1,
-      product.name,
-      product.turnover,
+      product.product_name,
+      product.saldo_awal,
+      product.stock_masuk,
+      product.stock_keluar,
+      product.stock_akhir,
     ]);
   
-    // Data produk slow moving
-    const slowMovingHeader = ['', 'PRODUK PERPUTARAN LAMBAT'];
-    const slowMovingColumns = ['No', 'Nama Produk', 'Perputaran Stok'];
-    const slowMovingRows = inventoryData.slowMoving.map((product, index) => [
-      index + 1,
-      product.name,
-      product.turnover,
-    ]);
+    // Footer dengan summary
+    const tableFooter = [
+      [], // Baris kosong
+      ['TOTAL', '', 
+       inventoryData.data.summary.total_saldo_awal,
+       inventoryData.data.summary.total_stock_masuk,
+       inventoryData.data.summary.total_stock_keluar,
+       inventoryData.data.summary.total_stock_akhir
+      ],
+    ];
   
     // Gabungkan semua bagian
     const csvContent = [
-      ...reportHeader,
-      ...summarySection,
-      fastMovingHeader,
-      fastMovingColumns,
-      ...fastMovingRows,
-      [],
-      slowMovingHeader,
-      slowMovingColumns,
-      ...slowMovingRows,
+      ...companyInfo,
+      ...tableHeader,
+      ...tableRows,
+      ...tableFooter,
     ]
-      .map(row => row.join(','))
+      .map(row => 
+        row.map(cell => {
+          // Handle nilai number untuk format Excel
+          if (typeof cell === 'number') return cell;
+          // Quote string yang mengandung koma
+          if (typeof cell === 'string' && cell.includes(',')) return `"${cell}"`;
+          return cell;
+        }).join(',')
+      )
       .join('\n');
   
     // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Stok_${currentOutlet?.name || 'All'}_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`);
+    link.setAttribute(
+      'download', 
+      `Laporan_Stok_${inventoryData.data.outlet.replace(/ /g, '_') || 'All'}_${format(new Date(), 'yyyyMMdd')}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -908,48 +969,60 @@ const handleExport = () => {
         <style>
           body { 
             font-family: Arial, sans-serif; 
-            padding: 20px;
+            padding: 15px;
             color: #333;
           }
           .header { 
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #eee;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+          }
+          .logo-container {
+            width: 70px;
+            margin-right: 15px;
+          }
+          .logo {
+            width: 100%;
+            height: auto;
+          }
+          .header-content {
+            flex: 1;
           }
           .title { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
+            font-size: 18px; 
+            font-weight: bold;
+            margin-bottom: 5px;
           }
-          .subtitle { 
-            color: #666; 
-            font-size: 14px; 
-            margin-bottom: 5px; 
+          .subtitle {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 3px;
           }
           .date {
             font-size: 12px;
-            color: #666;
+            color: #777;
           }
           .stats-summary {
-            margin: 20px 0;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
+            margin: 15px 0;
+            padding: 15px;
+            background-color:rgb(255, 255, 255);
+            border-radius: 5px;
           }
           .stat-item {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            display: flex;
           }
           .stat-label {
             font-weight: bold;
-            display: inline-block;
-            width: 200px;
+            width: 180px;
           }
           .category-header {
-            background-color: #f5f5f5;
-            padding: 15px;
-            margin-top: 30px;
-            border-radius: 8px 8px 0 0;
+            background-color:rgb(255, 255, 255);
+            padding: 12px 15px;
+            margin-top: 25px;
+            border-radius: 5px 5px 0 0;
             display: flex;
             justify-content: space-between;
             border: 1px solid #ddd;
@@ -957,12 +1030,12 @@ const handleExport = () => {
           }
           .category-name {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 15px;
           }
           .category-meta {
             color: #666;
-            font-size: 14px;
-            margin-top: 4px;
+            font-size: 13px;
+            margin-top: 3px;
           }
           .category-sales {
             text-align: right;
@@ -971,74 +1044,79 @@ const handleExport = () => {
           .category-percentage {
             color: #666;
             text-align: right;
-            font-size: 14px;
-            margin-top: 4px;
+            font-size: 13px;
+            margin-top: 3px;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 0 0 30px 0;
+            margin: 0 0 25px 0;
+            font-size: 13px;
           }
           th, td {
-            padding: 12px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
           }
           th { 
-            background-color: #f5f5f5; 
+            background-color:rgb(255, 255, 255); 
             font-weight: bold;
           }
           .text-right { 
             text-align: right; 
           }
           .footer {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 30px;
+            padding-top: 15px;
             border-top: 1px solid #eee;
             font-size: 12px;
             color: #666;
+            text-align: center;
           }
           .summary-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin: 30px 0;
-            padding: 20px;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
             background-color: #f9f9f9;
-            border-radius: 8px;
+            border-radius: 5px;
           }
           .summary-item {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
           }
           .summary-label {
             color: #666;
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 5px;
           }
           .summary-value {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 15px;
           }
           @media print {
-            body { -webkit-print-color-adjust: exact; }
+            body { 
+              padding: 10px;
+              -webkit-print-color-adjust: exact; 
+            }
             .stats-summary, th, .category-header, .summary-grid { 
               -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
             }
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="title">Laporan Penjualan Per Kategori</div>
-          <div class="subtitle">
-            Outlet: ${outletName}
+          <div class="logo-container">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+                 alt="Logo Kifa" 
+                 class="logo">
           </div>
-          <div class="subtitle">
-            Periode: ${startDate} - ${endDate}
-          </div>
-          <div class="date">
-            Dicetak pada: ${currentDate}
+          <div class="header-content">
+            <div class="title">LAPORAN PENJUALAN PER KATEGORI</div>
+            <div class="subtitle">Outlet: ${outletName}</div>
+            <div class="subtitle">Periode: ${startDate} - ${endDate}</div>
+            <div class="date">Dicetak pada: ${currentDate}</div>
           </div>
         </div>
   
@@ -1068,20 +1146,17 @@ const handleExport = () => {
                 <div class="category-name">${category.category_name}</div>
                 <div class="category-meta">${category.products.length} produk terjual</div>
               </div>
-              <div>
-                <div class="category-sales">Rp ${Number(category.total_sales).toLocaleString('id-ID')}</div>
-                <div class="category-percentage">${category.sales_percentage.toFixed(2)}% dari total</div>
-              </div>
             </div>
             
             <table>
               <thead>
                 <tr>
-                  <th>Produk</th>
-                  <th class="text-right">SKU</th>
-                  <th class="text-right">Kuantitas</th>
-                  <th class="text-right">Penjualan</th>
-                  <th class="text-right">% Kategori</th>
+                  <th>Nama Item</th>
+                  <th class="text-right">Kode Item</th>
+                  <th class="text-right">Jenis</th>
+                  <th class="text-right">Jumlah</th>
+                  <th class="text-left">Satuan</th>
+                  <th class="text-right">Total Harga</th>
                 </tr>
               </thead>
               <tbody>
@@ -1089,19 +1164,27 @@ const handleExport = () => {
                   <tr>
                     <td>${product.product_name}</td>
                     <td class="text-right">${product.product_sku}</td>
-                    <td class="text-right">${Number(product.quantity)}</td>
+                    <td class="text-right">${category.category_name}</td>
+                    <td class="text-right">${Number(product.quantity)}</td>                    
+                    <td class="text-left">${product.product_unit}</td>                    
                     <td class="text-right">Rp ${Number(product.sales).toLocaleString('id-ID')}</td>
-                    <td class="text-right">${product.sales_percentage.toFixed(2)}%</td>
                   </tr>
                 `).join('')}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="text-right" style="font-weight: bold;">Total</td>
+                  <td class="text-right" style="font-weight: bold;"> ${Number(category.total_quantity)}</td>
+                  <td colspan="2" class="text-right" style="font-weight: bold;">Rp ${Number(category.total_sales).toLocaleString('id-ID')}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         `).join('')}
   
         <div class="footer">
-          <p>Laporan ini dibuat secara otomatis oleh sistem.</p>
-          <p>© ${new Date().getFullYear()} Kifa Bakery </p>
+          <p>Laporan ini dibuat otomatis oleh Sistem Manajemen Penjualan</p>
+          <p>© ${new Date().getFullYear()} Kifa Bakery</p>
         </div>
       </body>
       </html>
@@ -1178,11 +1261,13 @@ const handleExport = () => {
       // Kolom data produk per kategori
       csvContent.push([
         'No', 
-        'Nama Produk', 
+        'Nama Item',
+        'Jenis',
         'SKU', 
-        'Kuantitas',
-        'Penjualan (Rp)',
-        'Persentase dari Kategori (%)'
+        'Jumlah',
+        'Satuan',
+        'Total Harga (Rp)',
+        // 'Persentase dari Kategori (%)'
       ]);
       
       // Data produk per kategori
@@ -1190,10 +1275,12 @@ const handleExport = () => {
         csvContent.push([
           index + 1,
           `"${product.product_name}"`,
+          `"${category.category_name}"`,
           `"${product.product_sku}"`,
           `"${Number(product.quantity).toLocaleString('id-ID')}"`,
+          `"${product.product_unit}"`,
           `"Rp ${Number(product.sales).toLocaleString('id-ID')}"`,
-          `"${product.sales_percentage.toFixed(2)}%"`
+          // `"${product.sales_percentage.toFixed(2)}%"`
         ]);
       });
       
@@ -1236,30 +1323,38 @@ const handleExport = () => {
       <head>
         <title>Laporan Penjualan Harian</title>
         <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            padding: 20px;
-            color: #333;
+          body { font-family: Arial, sans-serif; padding: 15px; color: #333; }
+          .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
           }
-          .header { 
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #eee;
+          .logo-container {
+            width: 70px;
+            margin-right: 15px;
           }
-          .title { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
+          .logo {
+            width: 100%;
+            height: auto;
           }
-          .subtitle { 
-            color: #666; 
-            font-size: 14px; 
-            margin-bottom: 5px; 
+          .header-content {
+            flex: 1;
+          }
+          .title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .subtitle {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 3px;
           }
           .date {
             font-size: 12px;
-            color: #666;
+            color: #777;
           }
           .summary-grid {
             display: grid;
@@ -1267,12 +1362,10 @@ const handleExport = () => {
             gap: 20px;
             margin: 30px 0;
             padding: 20px;
-            background-color: #f9f9f9;
+            background-color:rgb(255, 255, 255);
             border-radius: 8px;
           }
-          .summary-item {
-            margin-bottom: 10px;
-          }
+          .summary-item { margin-bottom: 10px; }
           .summary-label {
             color: #666;
             font-size: 14px;
@@ -1289,16 +1382,13 @@ const handleExport = () => {
             overflow: hidden;
           }
           .order-header {
-            background-color: #f5f5f5;
+            background-color:rgb(255, 255, 255);
             padding: 15px;
             border-bottom: 1px solid #ddd;
             display: flex;
             justify-content: space-between;
           }
-          .order-id {
-            font-weight: bold;
-            font-size: 16px;
-          }
+          .order-id { font-weight: bold; font-size: 16px; }
           .order-meta {
             display: flex;
             gap: 20px;
@@ -1318,18 +1408,16 @@ const handleExport = () => {
             text-align: left;
             border-bottom: 1px solid #ddd;
           }
-          th { 
-            background-color: #f9f9f9; 
+          th {
+            background-color:rgb(255, 255, 255);
             font-weight: bold;
           }
-          .text-right { 
-            text-align: right; 
-          }
+          .text-right { text-align: right; }
           .payment-badge {
             display: inline-block;
             padding: 4px 8px;
             border-radius: 4px;
-            background-color: #f5f5f5;
+            background-color:rgb(255, 255, 255);
             border: 1px solid #ddd;
             font-size: 12px;
           }
@@ -1343,7 +1431,7 @@ const handleExport = () => {
           }
           @media print {
             body { -webkit-print-color-adjust: exact; }
-            .summary-grid, th, .order-header { 
+            .summary-grid, th, .order-header {
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -1352,15 +1440,16 @@ const handleExport = () => {
       </head>
       <body>
         <div class="header">
-          <div class="title">Laporan Penjualan Harian</div>
-          <div class="subtitle">
-            Outlet: ${outletName}
+          <div class="logo-container">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png"
+                 alt="Logo Kifa"
+                 class="logo">
           </div>
-          <div class="subtitle">
-            Tanggal: ${reportDate}
-          </div>
-          <div class="date">
-            Dicetak pada: ${currentDate}
+          <div class="header-content">
+            <div class="title">LAPORAN PENJUALAN HARIAN</div>
+            <div class="subtitle">Outlet: ${outletName}</div>
+            <div class="subtitle">Tanggal: ${reportDate}</div>
+            <div class="date">Dicetak pada: ${currentDate}</div>
           </div>
         </div>
   
@@ -1387,6 +1476,7 @@ const handleExport = () => {
           <div class="order-container ${index > 0 ? 'page-break' : ''}">
             <div class="order-header">
               <div>
+                <div class="summary-label">No Transaksi</div>
                 <div class="order-id">#${order.order_id}</div>
               </div>
               <div class="order-meta">
@@ -1398,15 +1488,15 @@ const handleExport = () => {
                 Rp ${order.total.toLocaleString()}
               </div>
             </div>
-            
             <table>
               <thead>
                 <tr>
-                  <th>Produk</th>
-                  <th>SKU</th>
+                  <th>Nama Item</th>
+                  <th>Kode Item</th>
                   <th class="text-right">Harga</th>
-                  <th class="text-right">Kuantitas</th>
-                  <th class="text-right">Subtotal</th>
+                  <th class="text-right">Jumlah</th>
+                  <th class="text-left">Satuan</th>
+                  <th class="text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -1416,6 +1506,7 @@ const handleExport = () => {
                     <td>${item.sku || '-'}</td>
                     <td class="text-right">Rp ${item.unit_price.toLocaleString()}</td>
                     <td class="text-right">${item.quantity}</td>
+                    <td class="text-left">${item.unit}</td>
                     <td class="text-right">Rp ${(item.unit_price * item.quantity).toLocaleString()}</td>
                   </tr>
                 `).join('') : `
@@ -1425,6 +1516,10 @@ const handleExport = () => {
                 `}
               </tbody>
               <tfoot>
+                <tr>
+                  <td class="text-right" style="font-weight: bold;">Tax</td>
+                  <td class="text-right" style="font-weight: bold;">Rp ${order.tax.toLocaleString()}</td>
+                </tr>
                 <tr>
                   <td colspan="4" class="text-right" style="font-weight: bold;">Total</td>
                   <td class="text-right" style="font-weight: bold;">Rp ${order.total.toLocaleString()}</td>
@@ -1436,7 +1531,7 @@ const handleExport = () => {
   
         <div class="footer">
           <p>Laporan ini dibuat secara otomatis oleh sistem.</p>
-          <p>© ${new Date().getFullYear()} Kifa Bakery </p>
+          <p>© ${new Date().getFullYear()} Kifa Bakery</p>
         </div>
       </body>
       </html>
@@ -1447,7 +1542,7 @@ const handleExport = () => {
     frameDoc.write(printContent);
     frameDoc.close();
   
-    printFrame.onload = function() {
+    printFrame.onload = function () {
       setTimeout(() => {
         try {
           printFrame.contentWindow.focus();
@@ -1461,8 +1556,8 @@ const handleExport = () => {
         }
       }, 500);
     };
-  }
-
+  };
+  
   //export penjualan harian
   const handleExportDailySalesCSV = () => {
     // Verifikasi bahwa data penjualan tersedia
@@ -1479,7 +1574,7 @@ const handleExport = () => {
       // Data untuk File CSV
       salesData.data.orders.forEach(order => {
         const orderDate = order.order_time.split(' ')[0]; // Mengasumsikan format "YYYY-MM-DD HH:MM:SS"
-        const orderTime = order.order_time.split(' ')[1];
+        // const orderTime = order.order_time.split(' ')[1];
         const paymentMethod = order.payment_method === 'cash' ? 'Tunai' : 'Non-Tunai';
         
         // Jika order memiliki items
@@ -1487,16 +1582,16 @@ const handleExport = () => {
           order.items.forEach((item, index) => {
             // Ganti koma dengan titik koma untuk menghindari konflik dengan format CSV
             const productName = item.product_name.replace(/,/g, ';');
-            const productSKU = (item.product_sku || '-').replace(/,/g, ';');
-            const price = item.price;
+            const productSKU = (item.sku || '-').replace(/,/g, ';');
+            const price = item.unit_price;
             const quantity = item.quantity;
-            const subtotal = price * quantity;
+            const subtotal = item.unit_price * item.quantity;
             
             // Hanya tambahkan total order pada baris pertama dari setiap order
             const totalOrder = index === 0 ? order.total : '';
             
             // Baris CSV untuk setiap item
-            csvContent += `"${order.order_id}","${orderDate}","${orderTime}","${order.cashier}","${paymentMethod}","${productName}","${productSKU}",${price},${quantity},${subtotal},${totalOrder}\n`;
+            csvContent += `"${order.order_id}","${orderDate}","${order.cashier}","${paymentMethod}","${productName}","${productSKU}",${price},${quantity},${subtotal},${totalOrder}\n`;
           });
         } else {
           // Jika tidak ada detail item, tambahkan baris dengan order info saja
@@ -1683,81 +1778,103 @@ const handleExport = () => {
     setProductsData(sortedData);
   };
 
-  const handleStockChange = async (newMonth: string) => {
-    setSelectedMonth(newMonth);
+  const handleStockChange = async () => {
+    if (!selectedOutletId || !dateRange.from || !dateRange.to) {
+      setError("Harap pilih outlet dan tanggal terlebih dahulu");
+      return;
+    }
+  
     setIsLoading(true);
     setError(null);
   
     try {
-      const selectedMonthData = monthOptions.find(month => month.value === newMonth);
-      if (!selectedMonthData) return;
+      const startDate = format(dateRange.from, 'yyyy-MM-dd');
+      const endDate = format(dateRange.to, 'yyyy-MM-dd');
   
-      const outletParam = selectedOutletId || '1';
-      const monthParam = selectedMonthData.numeric;
-      const yearParam = 2025; // You can make this dynamic if needed
-  
-      // Fetch stock data
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/reports/monthly-inventory/${outletParam}?year=${yearParam}&month=${monthParam}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/reports/monthly-inventory/${selectedOutletId}?start_date=${startDate}&end_date=${endDate}`,
         {
           headers: {
-            'Accept': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
           },
         }
       );
   
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
   
       const result = await response.json();
-      
-      if (result.status && result.data) {
-        const inventoryReports = result.data.inventory_reports;
+      console.log('Full API Response:', result); // Debugging
   
-        // Format data untuk chart - mengelompokkan nilai stok per produk
-        const stockTrend = inventoryReports.map(report => ({
-          name: report?.product?.name.substring(0, 10) + "...", // Memotong nama yang terlalu panjang
-          value: parseFloat(report.stock_value)
-        }));
-  
-        const fastMoving = result.data?.fast_moving_products?.map(product => ({
-          name: product.product_name || "-", // Berikan fallback untuk product_name
-          turnover: `${product.average_stock ?? 0} unit - Rp ${( // Fallback untuk number
-            parseFloat(product.stock_value || "0") // Fallback untuk string number
-          ).toLocaleString()}`
-        })) || [];
-  
-        const slowMoving = result.data?.slow_moving_products?.map(product => ({
-          name: product.product_name || "-",
-          turnover: `${product.average_stock ?? 0} unit - Rp ${(
-            parseFloat(product.stock_value || "0")
-          ).toLocaleString()}`
-        })) || [];
- 
-        setInventoryData({
-          stockTrend,
-          fastMoving,
-          slowMoving,
-          totalValue: result.data.total_stock_value
-        });
+      // Validasi struktur response
+      if (!result?.data?.products) {
+        throw new Error('Struktur data tidak valid: products tidak ditemukan');
       }
   
+      // Format data untuk state
+      const formattedData = {
+        data: {
+          outlet: result.data.outlet || "Outlet Tidak Diketahui",
+          periode: result.data.periode || {
+            start_date: startDate,
+            end_date: endDate
+          },
+          products: result.data.products.map(product => ({
+            ...product,
+            // Pastikan semua field memiliki nilai default
+            product_name: product.product_name || "Produk Tanpa Nama",
+            product_code: product.product_code || "TANPA-KODE",
+            saldo_awal: Number(product.saldo_awal) || 0,
+            stock_masuk: Number(product.stock_masuk) || 0,
+            stock_keluar: Number(product.stock_keluar) || 0,
+            stock_akhir: Number(product.stock_akhir) || 0,
+            stock_aktual: Number(product.stock_aktual) || 0,
+            selisih: Number(product.selisih) || 0
+          })),
+          summary: result.data.summary || {
+            total_saldo_awal: result.data.products.reduce((sum, p) => sum + (Number(p.saldo_awal) || 0), 0),
+            total_stock_masuk: result.data.products.reduce((sum, p) => sum + (Number(p.stock_masuk) || 0), 0),
+            total_stock_keluar: result.data.products.reduce((sum, p) => sum + (Number(p.stock_keluar) || 0), 0),
+            total_stock_akhir: result.data.products.reduce((sum, p) => sum + (Number(p.stock_akhir) || 0), 0)
+          }
+        }
+      };
+  
+      setInventoryData(formattedData);
+  
     } catch (err) {
-      console.error("Failed to fetch inventory data:", err);
-      setError(err.message || "Gagal memuat data untuk stok yang dipilih");
+      console.error("Error fetching inventory data:", err);
+      setError(err.message || "Gagal memuat data stok");
+      
+      // Set data kosong jika error
+      setInventoryData({
+        data: {
+          outlet: "",
+          periode: {
+            start_date: format(dateRange.from, 'yyyy-MM-dd'),
+            end_date: format(dateRange.to, 'yyyy-MM-dd')
+          },
+          products: [],
+          summary: {
+            total_saldo_awal: 0,
+            total_stock_masuk: 0,
+            total_stock_keluar: 0,
+            total_stock_akhir: 0
+          }
+        }
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (selectedMonth && tab === "stock") {
-      handleStockChange(selectedMonth);
-    }
-  }, [selectedMonth, selectedOutletId, tab]);
+  // useEffect(() => {
+  //   if (selectedMonth && tab === "stock") {
+  //     handleStockChange(selectedMonth);
+  //   }
+  // }, [selectedMonth, selectedOutletId, tab]);
 
   const handleMonthChange = async (newMonth: string) => {
     if (tab === "stock") {
@@ -2065,7 +2182,7 @@ const handleExport = () => {
                     <TableHead>Kasir</TableHead>
                     <TableHead>Metode Pembayaran</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    {/* <TableHead className="text-right">Aksi</TableHead> */}
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2082,11 +2199,11 @@ const handleExport = () => {
                       <TableCell className="text-right">
                         Rp {order.total.toLocaleString()}
                       </TableCell>
-                      {/* <TableCell className="text-right">
+                      <TableCell className="text-right">
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
-                      </TableCell> */}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -2145,11 +2262,20 @@ const handleExport = () => {
         <TabsContent value="stock" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Analisis Stok</CardTitle>
+              <CardTitle>Laporan Stok</CardTitle>
               <CardDescription>
-                Tren stok dan pergerakan produk
+                Perubahan stok produk
                 {selectedOutletId !== "all" && currentOutlet && ` di ${currentOutlet.name}`}
               </CardDescription>
+              <div className="flex justify-between items-center mt-4">
+                <DateRangePicker 
+                  value={dateRange} 
+                  onChange={handleDateRangeChange} 
+                />
+                <Button onClick={handleStockChange}>
+                  Terapkan
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoading ? (
@@ -2163,91 +2289,125 @@ const handleExport = () => {
                 </Alert>
               ) : (
                 <>
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">
-                    Total Nilai Stok: Rp {inventoryData.totalValue.toLocaleString()}
-                  </h3>
-                  
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={inventoryData.stockTrend}>
-                      <XAxis
-                        dataKey="name"
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `Rp ${(value/1000).toFixed(0)}k`}
-                      />
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Periode: {inventoryData?.data?.periode.start_date} s/d {inventoryData?.data?.periode.end_date}
+                    </h3>
                     
-                        formatter={(value) => [`Rp ${parseInt(value).toLocaleString()}`, "Nilai Stok"]}
-                      
-                      <Bar
-                        dataKey="value"
-                        fill="currentColor"
-                        radius={[4, 4, 0, 0]}
-                        className="fill-primary"
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                      <StatCard 
+                        title="Total Saldo Awal" 
+                        value={`${inventoryData?.data?.summary.total_saldo_awal} pcs`}
+                        icon={<PackagePlus className="h-4 w-4" />}
                       />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                      <StatCard 
+                        title="Total Stock Masuk" 
+                        value={`${inventoryData?.data?.summary.total_stock_masuk} pcs`}
+                        icon={<PackageOpen className="h-4 w-4" />}
+                      />
+                      <StatCard 
+                        title="Total Stock Keluar" 
+                        value={`${inventoryData?.data?.summary.total_stock_keluar} pcs`}
+                        icon={<PackageMinus className="h-4 w-4" />}
+                      />
+                      <StatCard 
+                        title="Total Stock Akhir" 
+                        value={`${inventoryData?.data?.summary.total_stock_akhir} pcs`}
+                        icon={<PackageCheck className="h-4 w-4" />}
+                      />
+                    </div>
 
-                  {/* <div className="grid gap-4 md:grid-cols-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produk</TableHead>
+                          <TableHead>Satuan</TableHead>
+                          <TableHead className="text-right">Saldo Awal</TableHead>
+                          <TableHead className="text-right">Stock Masuk</TableHead>
+                          <TableHead className="text-right">Stock Keluar</TableHead>
+                          <TableHead className="text-right">Stock Akhir</TableHead>
+                          <TableHead className="text-right">Stock Aktual</TableHead>
+                          {/* <TableHead className="text-right">Selisih</TableHead> */}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {inventoryData?.data?.products?.map((product) => (
+                          <TableRow key={product.product_id}>
+                            <TableCell>
+                              <div className="font-medium">{product.product_name}</div>
+                              <div className="text-sm text-muted-foreground">{product.product_code}</div>
+                            </TableCell>
+                            <TableCell className="text-right">{product.unit}</TableCell>
+                            <TableCell className="text-right">{product.saldo_awal}</TableCell>
+                            <TableCell className="text-right">{product.stock_masuk}</TableCell>
+                            <TableCell className="text-right">{product.stock_keluar}</TableCell>
+                            <TableCell className="text-right">{product.stock_akhir}</TableCell>
+                            <TableCell className="text-right">{product.stock_aktual}</TableCell>
+                            {/* <TableCell className={`text-right ${
+                              product.selisih !== 0 ? 'text-red-500 font-bold' : ''
+                            }`}>
+                              {product.selisih !== 0 ? product.selisih : '-'}
+                            </TableCell> */}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Produk Dengan Perputaran Cepat</CardTitle>
+                        <CardTitle>Produk Dengan Stock Masuk Terbanyak</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>Produk</TableHead>
-                              <TableHead className="text-right">Perputaran</TableHead>
+                              <TableHead className="text-right">Qty</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {inventoryData.fastMoving.map((product, index) => (
-                              <TableRow key={index}>
-                                <TableCell className="font-medium">{product.name}</TableCell>
-                                <TableCell className="text-right">{product.turnover}x</TableCell>
-                              </TableRow>
-                            ))}
+                            {[...inventoryData?.data?.products]
+                              .sort((a, b) => b.stock_masuk - a.stock_masuk)
+                              .slice(0, 5)
+                              .map((product) => (
+                                <TableRow key={product.product_id}>
+                                  <TableCell className="font-medium">{product.product_name}</TableCell>
+                                  <TableCell className="text-right">{product.stock_masuk}</TableCell>
+                                </TableRow>
+                              ))}
                           </TableBody>
                         </Table>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardHeader>
-                        <CardTitle>Produk Dengan Perputaran Lambat</CardTitle>
+                        <CardTitle>Produk Dengan Stock Keluar Terbanyak</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>Produk</TableHead>
-                              <TableHead className="text-right">Perputaran</TableHead>
+                              <TableHead className="text-right">Qty</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {inventoryData.slowMoving.map((product, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{product.name}</TableCell>
-                                <TableCell className="text-right">{product.turnover}x</TableCell>
-                              </TableRow>
-                            ))}
+                            {[...inventoryData?.data?.products]
+                              .sort((a, b) => b.stock_keluar - a.stock_keluar)
+                              .slice(0, 5)
+                              .map((product) => (
+                                <TableRow key={product.product_id}>
+                                  <TableCell>{product.product_name}</TableCell>
+                                  <TableCell className="text-right">{product.stock_keluar}</TableCell>
+                                </TableRow>
+                              ))}
                           </TableBody>
                         </Table>
                       </CardContent>
                     </Card>
-                  </div> */}
+                  </div>
                 </>
               )}
             </CardContent>

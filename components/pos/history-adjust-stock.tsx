@@ -61,15 +61,24 @@ export default function HistoryAdjustStock({ inventories, date, setDate }: Histo
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {inventories.map((inventory) => (
-                            <TableRow key={inventory.id} className="hover:bg-gray-50 transition-colors">
-                                <TableCell className="text-sm text-gray-800 font-medium">{inventory.product.name}</TableCell>
-                                <TableCell className="text-sm text-gray-600">{inventory.quantity_change}</TableCell>
-                                <TableCell className="text-sm text-gray-600">{inventory.type === 'adjustment' ? "Penyesuaian" : inventory.type === 'shipment' ? 'Kiriman Pabrik' : inventory.type === 'purchase' ? 'Pembelian' : "Lainnya"}</TableCell>
-                                <TableCell className="text-sm text-gray-600">{inventory.notes}</TableCell>
-                                <TableCell className="text-sm text-gray-600">{inventory.status === 'approved' ? <Badge>Disetujui</Badge> : inventory.status === 'rejected' ? <Badge variant="destructive">Ditolak</Badge> : <Badge variant="secondary">Pending</Badge>}</TableCell>
+
+                        {inventories.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-sm text-gray-500">
+                                    Tidak ada permintaan penyesuaian pada tanggal ini.
+                                </TableCell>
                             </TableRow>
-                        ))}
+                        ) : (
+                            inventories.map((inventory) => (
+                                <TableRow key={inventory.id} className="hover:bg-gray-50 transition-colors">
+                                    <TableCell className="text-sm text-gray-800 font-medium">{inventory.product.name}</TableCell>
+                                    <TableCell className="text-sm text-gray-600">{inventory.quantity_change}</TableCell>
+                                    <TableCell className="text-sm text-gray-600">{inventory.type === 'adjustment' ? "Penyesuaian" : inventory.type === 'shipment' ? 'Kiriman Pabrik' : inventory.type === 'purchase' ? 'Pembelian' : "Lainnya"}</TableCell>
+                                    <TableCell className="text-sm text-gray-600">{inventory.notes}</TableCell>
+                                    <TableCell className="text-sm text-gray-600">{inventory.status === 'approved' ? <Badge>Disetujui</Badge> : inventory.status === 'rejected' ? <Badge variant="destructive">Ditolak</Badge> : <Badge variant="secondary">Pending</Badge>}</TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </div>

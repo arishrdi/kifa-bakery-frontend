@@ -39,15 +39,22 @@ export default function DashboardPage() {
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
 
         {currentOutlet && (
-          <Alert>
-            <Store className="h-4 w-4" />
-            <AlertTitle>Outlet Aktif: {currentOutlet.name}</AlertTitle>
-            <AlertDescription>Data yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
+          <Alert className="flex flex-row items-center">
+            <div className="flex gap-2">
+              <Store className="h-4 w-4" />
+              <div>
 
-            <DateRangePicker
-                      value={dateRange}
-                      onChange={setDateRange}
-                    />
+              <AlertTitle>Outlet Aktif: {currentOutlet.name}</AlertTitle>
+              <AlertDescription>Data yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
+              </div>
+            </div>
+
+            <div className="ml-auto">
+              <DateRangePicker
+                value={dateRange}
+                onChange={setDateRange}
+              />
+            </div>
           </Alert>
         )}
 
@@ -158,47 +165,17 @@ export default function DashboardPage() {
               <Card className="col-span-3">
                 <CardHeader>
                   <CardTitle>Penjualan Terlaris</CardTitle>
-                  
+
                   <CardDescription>
-                    {dashboardReport?.data.top_products.length || 0} produk terlaris 
+                    {dashboardReport?.data.top_products.length || 0} produk terlaris
                   </CardDescription>
-                  
+
                 </CardHeader>
                 <CardContent>
                   <RecentSales products={dashboardReport?.data.top_products || []} />
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
-
-        {tab === "stock" && (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Status Stok</CardTitle>
-                {currentOutlet && <CardDescription>Status stok real-time untuk {currentOutlet.name}</CardDescription>}
-              </CardHeader>
-              <CardContent>
-                <StockStatus />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {tab === "shifts" && (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ringkasan Shift</CardTitle>
-                {currentOutlet && (
-                  <CardDescription>Performa penjualan per shift untuk {currentOutlet.name}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                <ShiftOverview />
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>

@@ -22,8 +22,8 @@ export default function AdjustmentContent() {
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [productTypeMap, setProductTypeMap] = useState<{[key: number]: string}>({})
-  
+  const [productTypeMap, setProductTypeMap] = useState<{ [key: number]: string }>({})
+
   const initialInventoryFormData: InventoryInput = {
     outlet_id: currentOutlet?.id || 0,
     product_id: 0,
@@ -31,7 +31,7 @@ export default function AdjustmentContent() {
     type: "adjustment",
     notes: ""
   }
-  
+
   const [inventoryFormData, setInventoryFormData] = useState<InventoryInput>(initialInventoryFormData)
 
   const postInventoryHistory = createInventoryHistory()
@@ -66,17 +66,17 @@ export default function AdjustmentContent() {
     if (value === '' || value === '-') {
       return value;
     }
-    
+
     const cleanedValue = value.replace(/[^0-9-]/g, '');
     const isNegative = cleanedValue.startsWith('-');
     const digitsOnly = cleanedValue.replace(/-/g, '');
-    
+
     return isNegative ? '-' + digitsOnly : digitsOnly;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'quantity_change') {
       setInventoryFormData(prev => ({
         ...prev,
@@ -93,17 +93,17 @@ export default function AdjustmentContent() {
   const handleQuantityChange = (value: string) => {
     const numericValue = handleNumericInput(value);
     let suggestedType = inventoryFormData.type;
-    
+
     if (selectedProduct?.id && productTypeMap[selectedProduct.id]) {
       suggestedType = productTypeMap[selectedProduct.id];
     }
-    
+
     if (numericValue.startsWith('-')) {
       suggestedType = 'sale';
     } else if (numericValue !== '' && !numericValue.startsWith('-')) {
       suggestedType = 'purchase';
     }
-    
+
     setInventoryFormData(prev => ({
       ...prev,
       quantity_change: numericValue,
@@ -114,7 +114,7 @@ export default function AdjustmentContent() {
   const handleAdjustStock = (product: any) => {
     setSelectedProduct(product)
     const currentType = productTypeMap[product.id] || "adjustment";
-    
+
     setInventoryFormData({
       outlet_id: currentOutlet?.id || 0,
       product_id: product.id,
@@ -122,7 +122,7 @@ export default function AdjustmentContent() {
       type: currentType,
       notes: ""
     })
-    
+
     setIsAdjustDialogOpen(true)
   }
 
@@ -131,9 +131,10 @@ export default function AdjustmentContent() {
       "sale": "Penjualan",
       "purchase": "Pembelian",
       "adjustment": "Penyesuaian",
-      "other": "Kiriman"
+      "shipment": "Kiriman Pabrik",
+      "other": "Lainnya"
     };
-    
+
     return typeLabels[type as keyof typeof typeLabels] || type;
   }
 
@@ -144,14 +145,14 @@ export default function AdjustmentContent() {
       "adjustment": "text-orange-600 bg-orange-50 dark:bg-orange-900/20",
       "other": "text-blue-600 bg-blue-50 dark:bg-blue-900/20"
     };
-    
+
     return typeColors[type as keyof typeof typeColors] || "text-gray-600 bg-gray-50 dark:bg-gray-900/20";
   }
 
   const handleAdjustStockSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
+
     try {
       postInventoryHistory.mutate(
         {
@@ -168,14 +169,14 @@ export default function AdjustmentContent() {
                 ...prev,
                 [selectedProduct.id]: inventoryFormData.type
               };
-              
+
               if (currentOutlet?.id) {
                 localStorage.setItem(`productTypes_${currentOutlet.id}`, JSON.stringify(updatedMap));
               }
-              
+
               return updatedMap;
             });
-            
+
             setIsAdjustDialogOpen(false)
             setInventoryFormData(initialInventoryFormData)
             refetchProducts()
@@ -243,20 +244,22 @@ export default function AdjustmentContent() {
         </Alert>
       )}
 
-      <div className="space-y-4 overflow-x-auto bg-white">
+      {/* <div className="space-y-4 overflow-x-auto bg-white"> */}
+      <div className="space-y-4 overflow-x-auto bg-white dark:bg-gray-900 rounded-lg">
+
         <div className="border rounded-lg overflow-hidden shadow-sm min-w-[300px]">
           <Table className="min-w-full">
-            <TableHeader className="bg-white-50 dark:bg-orange-900/20">
+            <TableHeader className="">
               <TableRow>
-                <TableHead className="w-[40%] sm:w-[50%]">Produk</TableHead>
-                <TableHead className="text-center whitespace-nowrap">Tipe</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Stok</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="w-[40%] sm:w-[50%] px-2 sm:px-4 py-2">Produk</TableHead>
+                <TableHead className="text-center whitespace-nowrap px-2 sm:px-4 py-2">Tipe</TableHead>
+                <TableHead className="text-right whitespace-nowrap px-2 sm:px-4 py-2">Stok</TableHead>
+                <TableHead className="text-right px-2 sm:px-4 py-2">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products?.data
-                .filter(product => 
+                .filter(product =>
                   product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
                 )
@@ -290,8 +293,8 @@ export default function AdjustmentContent() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right py-2 sm:py-4">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
                         onClick={() => handleAdjustStock(product)}
                         className="group border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-600 hover:text-white dark:hover:bg-orange-700 dark:hover:text-white transition-colors"
@@ -310,17 +313,17 @@ export default function AdjustmentContent() {
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-orange-400">
+            <DialogTitle>
               Sesuaikan Stok
             </DialogTitle>
             <DialogDescription>
-              Sesuaikan stok untuk produk: <span className="font-medium text-orange-600 dark:text-orange-400">{selectedProduct?.name}</span>
+              Sesuaikan stok untuk produk: <span className="font-medium ">{selectedProduct?.name}</span>
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAdjustStockSubmit}>
             <div className="grid gap-4 sm:gap-6 py-4">
-              <div className="space-y-4 p-3 sm:p-4 rounded-lg border bg-orange-50/50 dark:bg-orange-900/20">
-                <h3 className="font-medium text-sm sm:text-base text-orange-700 dark:text-orange-300">Informasi Produk</h3>
+              <div className="space-y-4 p-3 sm:p-4 rounded-lg border ">
+                <h3 className="font-medium text-sm sm:text-base ">Informasi Produk</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm sm:text-base">Nama Produk</Label>
@@ -342,9 +345,9 @@ export default function AdjustmentContent() {
                   </div>
                 </div>
               </div>
-              
-              <div className="space-y-4 p-3 sm:p-4 rounded-lg border bg-orange-50/50 dark:bg-orange-900/20">
-                <h3 className="font-medium text-sm sm:text-base text-orange-700 dark:text-orange-300">Penyesuaian Stok</h3>
+
+              <div className="space-y-4 p-3 sm:p-4 rounded-lg border">
+                <h3 className="font-medium text-sm sm:text-base ">Penyesuaian Stok</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="quantity_change" className="text-sm sm:text-base">Nilai + / -</Label>
@@ -359,10 +362,10 @@ export default function AdjustmentContent() {
                       className="bg-white dark:bg-gray-800 h-9 sm:h-10"
                     />
                     <p className="text-xs text-muted-foreground">
-                      {inventoryFormData.quantity_change.startsWith('-') 
-                        ? 'Nilai negatif akan mengurangi stok' 
-                        : inventoryFormData.quantity_change 
-                          ? 'Nilai positif akan menambah stok' 
+                      {inventoryFormData.quantity_change.startsWith('-')
+                        ? 'Nilai negatif akan mengurangi stok'
+                        : inventoryFormData.quantity_change
+                          ? 'Nilai positif akan menambah stok'
                           : 'Masukkan nilai dengan tanda - jika mengurangi stok'}
                     </p>
                   </div>
@@ -380,7 +383,8 @@ export default function AdjustmentContent() {
                         <SelectItem value="sale">Penjualan</SelectItem>
                         <SelectItem value="purchase">Pembelian</SelectItem>
                         <SelectItem value="adjustment">Penyesuaian</SelectItem>
-                        <SelectItem value="other">Kiriman</SelectItem>
+                        <SelectItem value="shipment">Kiriman Pabrik</SelectItem>
+                        <SelectItem value="other">Lainnya</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -398,7 +402,7 @@ export default function AdjustmentContent() {
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter className="border-t pt-3 sm:pt-4">
               <Button
                 type="button"
@@ -408,9 +412,8 @@ export default function AdjustmentContent() {
               >
                 Batal
               </Button>
-              <Button 
-                type="submit" 
-                className="gap-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md hover:shadow-lg transition-all h-9 sm:h-10"
+              <Button
+                type="submit"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

@@ -35,7 +35,6 @@ export default function AdjustStock({ products }: AdjustStockProps) {
     return (
         <Dialog open={isAdjustStockDialogOpen} onOpenChange={setIsAdjustStockDialogOpen}>
             <DialogTrigger asChild>
-
                 <Button variant="outline" className="border-orange-200 bg-orange-50 hover:bg-orange-100"><Package className="h-4 w-4 text-orange-500" />Stok</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[700px]">

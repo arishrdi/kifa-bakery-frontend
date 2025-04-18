@@ -23,6 +23,7 @@ import { getInventoryByDate, getRealtimeStock } from "@/services/report-service"
 import { useInventoryHistoryByOutlet } from "@/services/inventory-service"
 import TransferStokContent from "@/components/products/transfer-stock-content"
 import ApproveStock from "@/components/products/approve-stock"
+import AdjustmentContent from "@/components/products/adjustment-content"
 
 // const stockData = [
 //   {
@@ -188,6 +189,8 @@ export default function StockPage() {
 
       {tab === "approve" && <ApproveStock />}
 
+
+      {tab === 'adjustment' && <AdjustmentContent />}
 
       {tab === "realtime" && (
         <Card>

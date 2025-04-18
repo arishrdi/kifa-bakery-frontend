@@ -41,8 +41,6 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
     const searchLower = searchQuery.toLowerCase();
     return (
       transaction.order_number.toLowerCase().includes(searchLower) ||
-      // transaction.id.toString().includes(searchQuery) || // ID biasanya number, sesuaikan jika perlu
-      // transaction.payment_method.toLowerCase().includes(searchLower)
       transaction.user.toLowerCase().includes(searchLower)
     );
   }) || [];
@@ -62,13 +60,9 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
 
   // Function to handle printing the receipt
   const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
-    // setSelectedTransaction(transaction);
-
-    // Create a new window for printing
     const printWindow = window.open('', '_blank', 'width=400,height=600')
 
     if (printWindow) {
-      // Generate receipt content
       const receiptContent = `
         <!DOCTYPE html>
         <html>
@@ -307,61 +301,6 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-
-
-                        {transaction.status === 'completed' && (
-                          <Popover
-                            open={selectedInvoice === transaction.order_number}
-                            onOpenChange={(open) => {
-                              if (open) {
-                                setSelectedInvoice(transaction.order_number)
-                              } else {
-                                setSelectedInvoice("")
-                              }
-                            }}
-                            modal
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                              >
-                                <TicketX className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-72 p-4 rounded-md shadow-lg border border-gray-200 bg-white"
-                              align="end"
-                              sideOffset={8}
-                            >
-                              <div className="space-y-3">
-                                <div>
-                                  <h4 className="text-sm font-semibold text-gray-900">Refund Transaksi?</h4>
-                                  <p className="text-xs text-gray-500">Invoice: {selectedInvoice}</p>
-                                </div>
-                                <div className="flex justify-end space-x-2">
-                                  <Button
-                                    size="sm"
-                                    className="bg-red-500 hover:bg-red-600 text-white"
-                                    onClick={() => handleCancelOrder(transaction.id)}
-                                  >
-                                    Refund
-                                  </Button>
-
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSelectedInvoice('')}
-                                  >
-                                    Batal
-                                  </Button>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-
                         <Button
                           variant="ghost"
                           size="sm"

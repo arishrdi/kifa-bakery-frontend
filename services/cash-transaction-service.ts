@@ -9,8 +9,8 @@ export const addCashTransaction = createMutationHook<CashInput, CashTransactionR
 
 export const subtractCashTransaction = createMutationHook<CashInput, CashTransactionResponse>('/cash-register-transactions/subtract-cash', 'post');
 
-export const getCashHistory = (id: number) => {
-    return createQueryHook<CashHistoryResponse>(`/cash-register-transactions?source=cash&outlet_id=${id}`, ['cash-history', id.toString()]);
+export const getCashHistory = (id: number, date: string) => {
+    return createQueryHook<CashHistoryResponse>(`/cash-register-transactions?source=cash&outlet_id=${id}&date=${date}`, ['cash-history', id.toString(), date]);
 };
 
 export const getCashHistoryPOS = (id: number) => {
