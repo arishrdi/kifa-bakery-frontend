@@ -6,7 +6,16 @@ export interface OrderInput {
   payment_method: string;
   total_paid: number;
   tax: number;
+  member_id?: number
   items: Item[];
+}
+
+export interface RevenueResponse extends StatusMessage {
+  data: {
+    from: string,
+    to: string,
+    total: string
+  }
 }
 
 // export interface Item {
@@ -40,33 +49,33 @@ export interface OrderResponse extends StatusMessage {
 // }
 
 export interface Data {
-  order_number:   string;
-  outlet_id:      number;
-  user_id:        number;
-  shift_id:       number;
-  subtotal:       number;
-  tax:            number;
-  discount:       number;
-  total:          number;
-  total_paid:     number;
-  change:         number;
+  order_number: string;
+  outlet_id: number;
+  user_id: number;
+  shift_id: number;
+  subtotal: number;
+  tax: number;
+  discount: number;
+  total: number;
+  total_paid: number;
+  change: number;
   payment_method: string;
-  status:         string;
-  notes:          null;
-  updated_at:     Date;
-  created_at:     Date;
-  id:             number;
-  items:          Item[];
+  status: string;
+  notes: null;
+  updated_at: Date;
+  created_at: Date;
+  id: number;
+  items: Item[];
 }
 
 export interface Item {
-  id:         number;
-  order_id:   number;
+  id: number;
+  order_id: number;
   product_id: number;
-  quantity:   number;
-  price:      string;
-  discount:   string;
-  subtotal:   string;
+  quantity: number;
+  price: string;
+  discount: string;
+  subtotal: string;
   created_at: Date;
   updated_at: Date;
 }

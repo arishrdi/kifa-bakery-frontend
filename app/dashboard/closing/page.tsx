@@ -28,6 +28,7 @@ import { getCashHistory, getCashHistoryPOS } from "@/services/cash-transaction-s
 import { cancelOrder, getHistoryOrders } from "@/services/order-service"
 import { toast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
+import TransactionDetailDialog from "@/components/transaction-detail-dialog"
 
 export default function ClosingPage() {
   const { currentOutlet } = useOutlet()
@@ -105,10 +106,10 @@ export default function ClosingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
 
-            <div className="rounded-md border">
-              <div className="p-4">
+            <div className="">
+              <div className="">
                 <div className="flex justify-between">
-                  <h3 className="font-semibold">Ringkasan Transaksi</h3>
+                  {/* <h3 className="font-semibold">Ringkasan Transaksi</h3> */}
                   <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -172,6 +173,7 @@ export default function ClosingPage() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
 
+                            <TransactionDetailDialog trx={transaction} />
 
                             {transaction.status === 'completed' && (
                               <Popover
@@ -279,10 +281,7 @@ export default function ClosingPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <div className="p-4">
-                <h3 className="font-semibold">Ringkasan Kas</h3>
-              </div>
+            <div className="">
               <Table>
                 <TableHeader>
                   <TableRow>

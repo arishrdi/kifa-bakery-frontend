@@ -72,7 +72,8 @@ export function CashRegister({ outletId, cashBalance }: { outletId: number, cash
         <PopoverTrigger asChild>
           <Button variant="outline" className="border-orange-200 bg-orange-50 hover:bg-orange-100">
             <Banknote className="mr-2 h-4 w-4 text-orange-500" />
-            <span className="font-medium">Rp {Number(cashBalance).toLocaleString()}</span>
+            {/* <span className="font-medium">Rp {Number(cashBalance).toLocaleString()}</span> */}
+            Kas kasir
             <ChevronsUpDown className="ml-2 h-4 w-4 text-orange-500 opacity-50" />
           </Button>
         </PopoverTrigger>

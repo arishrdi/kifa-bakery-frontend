@@ -18,10 +18,10 @@
 import { createQueryHook } from "@/lib/query-hooks";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { QueryFunction } from "@tanstack/react-query"
+import { QueryFunction, useQuery } from "@tanstack/react-query"
 import { getAuthToken } from '@/services/auth-service';
 import { DashboardResponse } from "@/types/dashboard";
-import {  GetInventoryByDateResponse, RealtimeStockResponse, SalesDataDaily } from "@/types/report";
+import { GetInventoryByDateResponse, RealtimeStockResponse, SalesDataDaily } from "@/types/report";
 import { getCookie } from "cookies-next";
 
 interface DashboardReportResponse {
@@ -203,18 +203,18 @@ export const getInventoryByDate = (outletId: number, date: string) => {
 
 export const getDashboardReport = (outletId: number, dateRange?: DateRange) => {
   const params = new URLSearchParams();
-  
+
   if (dateRange?.from) {
     params.append('start_date', dateRange.from.toISOString().split('T')[0]);
   }
   if (dateRange?.to) {
     params.append('end_date', dateRange.to.toISOString().split('T')[0]);
   }
-  
+
   const queryString = params.toString() ? `?${params.toString()}` : '';
-  
+
   return createQueryHook<DashboardReportResponse>(
-    `/reports/dashboard-summary/${outletId}${queryString}`, 
+    `/reports/dashboard-summary/${outletId}${queryString}`,
     ['dashboard-report', outletId.toString(), dateRange?.from?.toString(), dateRange?.to?.toString()]
   )();
 };
@@ -240,16 +240,16 @@ const fetchTopProducts = async (dateRange: DateRange) => {
 
 export const getSalesByCategory = (outletId: number, dateRange: DateRange) => {
   const params = new URLSearchParams();
-  
+
   if (dateRange?.from) {
     params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'));
   }
   if (dateRange?.to) {
     params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'));
   }
-  
+
   const url = `/reports/sales-by-category/${outletId}?${params.toString()}`;
-  
+
   return {
     queryKey: ['sales-by-category', outletId, dateRange?.from?.toString(), dateRange?.to?.toString()],
     queryFn: () => fetchApi({ queryKey: [url] }) as Promise<SalesByCategoryResponse>,
@@ -273,4 +273,62 @@ export const getSalesDaily = (outletId: number) => ({
     return response.json();
   },
 });
+
+export const getApprovalReports = (outletId: number, startDate: string, endDate: string) => ({
+  queryKey: ['inventory-approvals', outletId, startDate, endDate],
+  queryFn: async () => {
+    const response = await fetch(
+      `${BASE_URL}/reports/inventory-approvals/${outletId}?start_date=${startDate}&end_date=${endDate}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+    if (!data) {
+      throw new Error('Response data is undefined');
+    }
+
+    return data;
+  },
+  enabled: !!outletId && !!startDate && !!endDate,
+});
+
+export const useApprovalReports = (outletId: number | undefined, dateFrom?: Date, dateTo?: Date) => {
+  const startDate = dateFrom ? format(dateFrom, 'yyyy-MM-dd') : '';
+  const endDate = dateTo ? format(dateTo, 'yyyy-MM-dd') : '';
+
+  return useQuery(
+    getApprovalReports(outletId ?? 0, startDate, endDate)
+  );
+};
+
+export const getProductByMember = (params: {
+  outletId: number,
+  dateRange: {
+    start_date: string;
+    end_date: string;
+  }
+}) => {
+  // const formatDateLocal = (date: Date) => date.toLocaleDateString("en-CA"); // YYYY-MM-DD
+
+  const startDate = params.dateRange.start_date;
+  const endDate = params.dateRange.end_date;
+
+  if (!startDate || !endDate) {
+    return Promise.reject(new Error("Invalid date range"));
+  }
+
+  return fetch(`${BASE_URL}/reports/sales-by-member/${params.outletId}?start_date=${startDate}&end_date=${endDate}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }).then((res) => res.json());
+};
 

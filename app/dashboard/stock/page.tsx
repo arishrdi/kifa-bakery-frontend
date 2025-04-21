@@ -477,7 +477,8 @@ export default function StockPage() {
                     </Badge>
                   )}
                   {selectedProduct.quantity < selectedProduct.min_stock && selectedProduct.quantity > 0 && (
-                    <Badge
+                   
+                   <Badge
                       variant="outline"
                       className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
                     >

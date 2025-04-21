@@ -29,13 +29,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Edit, MoreHorizontal, Plus, Trash2, UserPlus } from "lucide-react";
+import { CalendarIcon, Edit, Eye, History, MoreHorizontal, Plus, Trash2, UserPlus } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Member, MemberInput } from "@/types/member";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { createMember, deleteMember, getAllMembers, updateMember } from "@/services/member-service";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import Link from "next/link";
 
 export default function MemberPage() {
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
@@ -90,7 +91,7 @@ export default function MemberPage() {
     });
   };
 
-  const handleUpdateStaff = (e: FormEvent) => {
+  const handleUpdateMember = (e: FormEvent) => {
     e.preventDefault();
 
     if (!selectedMember) return;
@@ -117,7 +118,7 @@ export default function MemberPage() {
     });
   }
 
-  const handleDeleteStaff = () => {
+  const handleDeleteMember = () => {
     if (!selectedMember) return;
 
     delMember.mutate(selectedMember.id, {
@@ -185,7 +186,7 @@ export default function MemberPage() {
                   {isEditStaffDialogOpen ? "Edit informasi member" : "Tambahkan member baru dengan mengisi detail di bawah ini."}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={isEditStaffDialogOpen ? handleUpdateStaff : handleCreateStaff}>
+              <form onSubmit={isEditStaffDialogOpen ? handleUpdateMember : handleCreateStaff}>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="name" className="text-right">
@@ -202,6 +203,21 @@ export default function MemberPage() {
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="phone" className="text-right">
+                      Telp
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      placeholder="No. telp member"
+                      className="col-span-3"
+                      value={formData.phone || ""}
+                      onChange={handleInputChange}
+                      required
+                      type="phone"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="email" className="text-right">
                       Email
                     </Label>
@@ -212,23 +228,7 @@ export default function MemberPage() {
                       className="col-span-3"
                       value={formData.email || ""}
                       onChange={handleInputChange}
-                      required
                       type="email"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="phone" className="text-right">
-                      Telp
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      placeholder="No. telp member (opsional)"
-                      className="col-span-3"
-                      value={formData.phone || ""}
-                      onChange={handleInputChange}
-                      required
-                      type="phone"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -243,7 +243,6 @@ export default function MemberPage() {
                       className="col-span-3"
                       value={formData.address || ""}
                       onChange={handleInputChange}
-                      required={!isEditStaffDialogOpen}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -320,7 +319,7 @@ export default function MemberPage() {
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={handleDeleteStaff}
+                  onClick={handleDeleteMember}
                   disabled={delMember.isPending}
                 >
                   {delMember.isPending ? "Menghapus..." : "Hapus Member"}
@@ -333,10 +332,10 @@ export default function MemberPage() {
 
       <Card>
         {/* <VisuallyHidden> */}
-          <CardHeader>
-            <CardTitle>Daftar Member</CardTitle>
-            <CardDescription>Kelola member</CardDescription>
-          </CardHeader>
+        <CardHeader>
+          <CardTitle>Daftar Member</CardTitle>
+          <CardDescription>Kelola member</CardDescription>
+        </CardHeader>
         {/* </VisuallyHidden> */}
         <CardContent>
           <Table>
@@ -347,6 +346,7 @@ export default function MemberPage() {
                 <TableHead>No. Hp</TableHead>
                 <TableHead>Alamat</TableHead>
                 <TableHead>Jenis Kelamin</TableHead>
+                <TableHead>Total transaksi</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -358,7 +358,7 @@ export default function MemberPage() {
                   <TableCell>{member.phone}</TableCell>
                   <TableCell>{member.address}</TableCell>
                   <TableCell>{member.gender === 'male' ? "Laki-laki" : "Perempuan"}</TableCell>
-
+                  <TableCell>{member.orders_count}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -369,6 +369,11 @@ export default function MemberPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/u/member/${member.id}`}>
+                            <History className="mr-2 h-4 w-4" /> Transaksi
+                          </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(member)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>

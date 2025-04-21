@@ -215,8 +215,9 @@ export default function AdjustmentContent() {
   }
 
   return (
-    <div className="flex flex-col space-y-4 p-2 sm:p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+    // <div className="flex flex-col space-y-4 p-2 sm:p-4 md:p-6">
+      <div>
+      {/* <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
           Penyesuaian Stok
         </h2>
@@ -230,9 +231,9 @@ export default function AdjustmentContent() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-      </div>
+      </div> */}
 
-      {currentOutlet && (
+      {/* {currentOutlet && (
         <Alert className="mt-2 mb-4">
           <Store className="h-4 w-4" />
           <AlertTitle className="text-sm sm:text-base">
@@ -242,7 +243,7 @@ export default function AdjustmentContent() {
             Data stock produk yang ditampilkan adalah untuk outlet {currentOutlet.name}.
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       {/* <div className="space-y-4 overflow-x-auto bg-white"> */}
       <div className="space-y-4 overflow-x-auto bg-white dark:bg-gray-900 rounded-lg">

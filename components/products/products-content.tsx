@@ -25,6 +25,8 @@ import { Product, ProductInput } from "@/types/product"
 import { createInventoryHistory } from "@/services/inventory-service"
 import { InventoryInput } from "@/types/inventory"
 import { toast } from "@/hooks/use-toast"
+import { DataTable } from "../ui/data-table"
+import { columns } from "./column"
 
 export default function ProductsContent() {
   const { currentOutlet } = useOutlet()
@@ -161,17 +163,17 @@ export default function ProductsContent() {
           setFormData(initialFormData)
           setPreviewImage(null)
           refetchProducts()
-          toast({ 
-            title: "Produk Berhasil Ditambahkan!", 
+          toast({
+            title: "Produk Berhasil Ditambahkan!",
             description: "Produk baru telah berhasil disimpan ke sistem.",
             variant: "default"
           })
         },
         onError: () => {
-          toast({ 
-            title: "Gagal Menyimpan Produk!", 
-            description: "Terjadi kesalahan saat mencoba menambahkan produk. Silakan cek inputan.", 
-            variant: "destructive" 
+          toast({
+            title: "Gagal Menyimpan Produk!",
+            description: "Terjadi kesalahan saat mencoba menambahkan produk. Silakan cek inputan.",
+            variant: "destructive"
           })
         }
       })
@@ -212,17 +214,17 @@ export default function ProductsContent() {
             setFormData(initialFormData);
             setPreviewImage(null);
             refetchProducts();
-            toast({ 
-              title: "Perubahan Disimpan!", 
+            toast({
+              title: "Perubahan Disimpan!",
               description: "Produk telah berhasil diperbarui.",
               variant: "default"
             })
           },
           onError: () => {
-            toast({ 
-              title: "Gagal Memperbarui Produk!", 
-              description: "Pembaruan produk tidak berhasil. Cek inputan atau koneksi internet.", 
-              variant: 'destructive' 
+            toast({
+              title: "Gagal Memperbarui Produk!",
+              description: "Pembaruan produk tidak berhasil. Cek inputan atau koneksi internet.",
+              variant: 'destructive'
             })
           }
         }
@@ -233,6 +235,7 @@ export default function ProductsContent() {
   };
 
   const handleEditClick = (product: Product) => {
+
     setSelectedProduct(product);
     setFormData({
       name: product.name,
@@ -324,7 +327,7 @@ export default function ProductsContent() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">{isEditProductOpen ? "Edit Produk" : "Manajemen Produk"}</h2>
         <div className="flex items-center space-x-2">
-          <div className="relative">
+          {/* <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -333,7 +336,7 @@ export default function ProductsContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
+          </div> */}
 
           <Dialog
             open={isAddProductOpen || isEditProductOpen}
@@ -580,7 +583,7 @@ export default function ProductsContent() {
               </form>
             </DialogContent>
           </Dialog>
-        
+
         </div>
       </div>
 
@@ -593,100 +596,8 @@ export default function ProductsContent() {
       )}
       <Card>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SKU</TableHead>
-                <TableHead>Produk</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead className="text-right">Harga</TableHead>
-                <TableHead className="text-right">Stok</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products?.data.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>{product.sku}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-md bg-orange-100 flex items-center justify-center">
-                        <img
-                          src={product.image || "/placeholder.svg"}
-                          alt={product.name}
-                          className="h-10 w-10 rounded-md object-cover"
-                        />
-                      </div>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {product.description || 'Tidak ada deskripsi'}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{product.category.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="font-medium">Rp {product.price.toLocaleString()}</div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className={`font-medium ${product.quantity <= product.min_stock ? "text-orange-600" : ""}`}>
-                      {product.quantity}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Min: {product.min_stock}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        product.is_active
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                      }
-                    >
-                      {product.is_active ? "Aktif" : "Tidak Aktif"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Buka menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => { handleEditClick(product); setIsEditProductOpen(true) }}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {/* <DropdownMenuItem className="text-orange-500" onClick={() => handleAdjustStockClick(product)}>
-                          <Plus className="mr-2 h-4 w-4" /> Sesuaikan Stok
-                        </DropdownMenuItem> */}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(product)}>
-                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {products?.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Tidak ada produk yang ditemukan.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+
+          {products?.data && <DataTable columns={columns} data={products?.data} onDelete={handleDeleteClick} onEdit={handleEditClick} />}
         </CardContent>
       </Card>
 

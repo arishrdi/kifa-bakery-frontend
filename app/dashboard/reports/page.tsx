@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import  html2canvas  from 'html2canvas';
+import html2canvas from 'html2canvas';
 import { DateRange } from "react-day-picker"
 import { getCookie } from "cookies-next";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +10,13 @@ import { PackageOpen, PackageCheck, PackageMinus, PackagePlus } from "lucide-rea
 import { toast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { getSalesByCategory, getSalesDaily  } from "@/services/report-service";
+import { getSalesByCategory, getSalesDaily, useApprovalReports } from "@/services/report-service";
 import { useOutlet } from "@/contexts/outlet-context";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import RealtimeStock from "@/components/report/real-time";
+import ProductPerMember from "@/components/report/product-per-member"
+import { getProductByMember } from "@/services/report-service";
+import { getRealtimeStock } from "@/services/report-service"
 import {
   Card,
   CardContent,
@@ -80,6 +84,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import ApprovalReport from "@/components/report/approve";
 
 const salesData = [
   { name: "Jan", total: 150000000 },
@@ -187,8 +192,17 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [productsData, setProductsData] = useState([]);
 
+
   const [summaryData, setSummaryData] = useState(null);
+  const [dateRangeMember, setDateRangeMember] = useState({
+    from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
+    to: new Date() // Hari ini
+  });
   const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
+    to: new Date() // Hari ini
+  });
+  const [dateRangeApprove, setDateRangeApprove] = useState({
     from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
     to: new Date() // Hari ini
   });
@@ -196,7 +210,7 @@ export default function ReportsPage() {
   const outletId = 1;
 
   const { data } = useQuery(getSalesByCategory(outletId, dateRange));
-  
+
   const { data: salesData } = useQuery({
     ...getSalesDaily(outletId),
   });
@@ -206,7 +220,7 @@ export default function ReportsPage() {
   //   isLoading: isLoadingCategories,
   //   error: categoryError
   // } = useQuery(getSalesByCategory(outletId, dateRange));
-  
+
   // const { 
   //   data: dailyData,
   //   isLoading: isLoadingDaily,
@@ -221,13 +235,13 @@ export default function ReportsPage() {
   const handleDateRangeChange = (newRange: { from: Date; to: Date }) => {
     setDateRange(newRange);
   };
-  
+
   const [sortConfig, setSortConfig] = useState({
     key: 'total_sales',
     direction: 'desc'
   });
   const [monthlySortConfig, setMonthlySortConfig] = useState({
-    key: 'month', 
+    key: 'month',
     direction: 'asc'
   });
 
@@ -240,18 +254,18 @@ export default function ReportsPage() {
   }, [selectedOutletId]);
 
   // Mendapatkan bulan saat ini dalam format yang sesuai dengan monthOptions
-const getCurrentMonth = () => {
-  const date = new Date();
-  const monthNames = [
-    "january", "february", "march", "april", "may", "june",
-    "july", "august", "september", "october", "november", "december"
-  ];
-  return monthNames[date.getMonth()];
-};
+  const getCurrentMonth = () => {
+    const date = new Date();
+    const monthNames = [
+      "january", "february", "march", "april", "may", "june",
+      "july", "august", "september", "october", "november", "december"
+    ];
+    return monthNames[date.getMonth()];
+  };
 
-// Menggunakan bulan saat ini sebagai nilai default
-// const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
-const [selectedMonth, setSelectedMonth] = useState<string>();
+  // Menggunakan bulan saat ini sebagai nilai default
+  // const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
+  const [selectedMonth, setSelectedMonth] = useState<string>();
   const handleShowDetail = (report: any) => {
     setSelectedReport(report);
     setIsDetailModalOpen(true);
@@ -277,7 +291,7 @@ const [selectedMonth, setSelectedMonth] = useState<string>();
   const getFormattedDateRange = (date: Date, type: string) => {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
-    
+
     switch (type) {
       case "daily":
         return format(date, "yyyy-MM-dd");
@@ -313,50 +327,50 @@ const [selectedMonth, setSelectedMonth] = useState<string>();
   };
 
   type MonthOption = {
-  value: string;
-  label: string;
-  numeric: number;
-};
+    value: string;
+    label: string;
+    numeric: number;
+  };
 
-const monthOptions: MonthOption[] = [
-  { value: "january", label: "Januari 2025", numeric: 1 },
-  { value: "february", label: "Februari 2025", numeric: 2 },
-  { value: "march", label: "Maret 2025", numeric: 3 },
-  { value: "april", label: "April 2025", numeric: 4 },
-  { value: "may", label: "Mei 2025", numeric: 5 },
-  { value: "june", label: "Juni 2025", numeric: 6 },
-  { value: "july", label: "Juli 2025", numeric: 7 },
-  { value: "august", label: "Agustus 2025", numeric: 8 },
-  { value: "september", label: "September 2025", numeric: 9 },
-  { value: "october", label: "Oktober 2025", numeric: 10 },
-  { value: "november", label: "November 2025", numeric: 11 },
-  { value: "december", label: "Desember 2025", numeric: 12 },
-];
+  const monthOptions: MonthOption[] = [
+    { value: "january", label: "Januari 2025", numeric: 1 },
+    { value: "february", label: "Februari 2025", numeric: 2 },
+    { value: "march", label: "Maret 2025", numeric: 3 },
+    { value: "april", label: "April 2025", numeric: 4 },
+    { value: "may", label: "Mei 2025", numeric: 5 },
+    { value: "june", label: "Juni 2025", numeric: 6 },
+    { value: "july", label: "Juli 2025", numeric: 7 },
+    { value: "august", label: "Agustus 2025", numeric: 8 },
+    { value: "september", label: "September 2025", numeric: 9 },
+    { value: "october", label: "Oktober 2025", numeric: 10 },
+    { value: "november", label: "November 2025", numeric: 11 },
+    { value: "december", label: "Desember 2025", numeric: 12 },
+  ];
 
   // const handleShowDetail = (report: any) => {
   //   setSelectedReport(report);
   //   setIsDetailModalOpen(true);
   // };
 
-// Print function for Stock tab
-const handlePrintStockReport = () => {
-  const printFrame = document.createElement('iframe');
-  printFrame.style.position = 'absolute';
-  printFrame.style.top = '-1000px';
-  printFrame.style.left = '-1000px';
-  document.body.appendChild(printFrame);
+  // Print function for Stock tab
+  const handlePrintStockReport = () => {
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'absolute';
+    printFrame.style.top = '-1000px';
+    printFrame.style.left = '-1000px';
+    document.body.appendChild(printFrame);
 
-  const currentDate = format(new Date(), 'dd/MM/yy - dd/MM/yy', { locale: id });
-  const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
-  const periodeText = inventoryData.data?.periode 
-    ? `${format(new Date(inventoryData.data.periode.start_date), 'dd/MM/yy')} - ${format(new Date(inventoryData.data.periode.end_date), 'dd/MM/yy')}`
-    : format(selectedDate, 'dd/MM/yy', { locale: id });
+    const currentDate = format(new Date(), 'dd/MM/yy - dd/MM/yy', { locale: id });
+    const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
+    const periodeText = inventoryData.data?.periode
+      ? `${format(new Date(inventoryData.data.periode.start_date), 'dd/MM/yy')} - ${format(new Date(inventoryData.data.periode.end_date), 'dd/MM/yy')}`
+      : format(selectedDate, 'dd/MM/yy', { locale: id });
 
-  // Use your actual Kifa Bakery logo base64 here
-  // const logoSrc = ""/>
+    // Use your actual Kifa Bakery logo base64 here
+    // const logoSrc = ""/>
 
 
-  const printContent = `
+    const printContent = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -519,79 +533,91 @@ const handlePrintStockReport = () => {
     </html>
   `;
 
-  const frameDoc = printFrame.contentWindow.document;
-  frameDoc.open();
-  frameDoc.write(printContent);
-  frameDoc.close();
+    const frameDoc = printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(printContent);
+    frameDoc.close();
 
-  printFrame.onload = function() {
-    setTimeout(() => {
-      try {
-        printFrame.contentWindow.focus();
-        printFrame.contentWindow.print();
-      } catch (error) {
-        console.error('Gagal mencetak:', error);
-      } finally {
-        setTimeout(() => {
-          document.body.removeChild(printFrame);
-        }, 1000);
-      }
-    }, 500);
+    printFrame.onload = function () {
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (error) {
+          console.error('Gagal mencetak:', error);
+        } finally {
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+          }, 1000);
+        }
+      }, 500);
+    };
   };
-};
 
-// Helper function to generate chart image (you'll need to implement this)
-const generateStockChartImage = async () => {
-  // Get the chart element (you'll need to add a ref to your chart)
-  const chartElement = document.querySelector('.recharts-wrapper');
-  if (!chartElement) return '';
-  
-  try {
-    const canvas = await html2canvas(chartElement as HTMLElement);
-    return canvas.toDataURL('image/png');
-  } catch (error) {
-    console.error('Failed to generate chart image:', error);
-    return '';
-  }
-};
+  // Helper function to generate chart image (you'll need to implement this)
+  const generateStockChartImage = async () => {
+    // Get the chart element (you'll need to add a ref to your chart)
+    const chartElement = document.querySelector('.recharts-wrapper');
+    if (!chartElement) return '';
 
-function StatCard({ title, value, icon }) {
-  return (
-    <div className="border rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
-        {icon}
+    try {
+      const canvas = await html2canvas(chartElement as HTMLElement);
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Failed to generate chart image:', error);
+      return '';
+    }
+  };
+
+  function StatCard({ title, value, icon }) {
+    return (
+      <div className="border rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
+          {icon}
+        </div>
+        <p className="text-2xl font-bold mt-2">{value}</p>
       </div>
-      <p className="text-2xl font-bold mt-2">{value}</p>
-    </div>
-  );
-}
-
-//handle print
-const handlePrint = () => {
-  if (tab === "monthly") {
-    handlePrintMonthlyReport();
-  } else if (tab === "stock") {
-    handlePrintStockReport();
-  } else if (tab === "kategori") {
-    handlePrintCategoriesReport();
-  } else if (tab === "dailySales") {
-    handlePrintDailySalesReport();
+    );
   }
-};
 
-// handle export csv
-const handleExport = () => {
-  if (tab === "monthly") {
-    handleExportMonthlyCSV();
-  } else if (tab === "stock") {
-    handleExportStockCSV();
-  } else if (tab === "kategori") {
-    handleExportCategoriesCSV();
-  } else if (tab === "dailySales") {
-    handleExportDailySalesCSV();
-  }
-};
+  //handle print
+  const handlePrint = () => {
+    if (tab === "monthly") {
+      handlePrintMonthlyReport();
+    } else if (tab === "stock") {
+      handlePrintStockReport();
+    } else if (tab === "kategori") {
+      handlePrintCategoriesReport();
+    } else if (tab === "dailySales") {
+      handlePrintDailySalesReport();
+    } else if (tab === "realtime") {
+      handlePrintStockRealTimeReport();
+    } else if (tab === "productByMember") {
+      handlePrintSalesMemberReport();
+    } else if (tab === "approve") {
+      handlePrintApproveReport();
+    }
+  };
+
+  // handle export csv
+  const handleExport = () => {
+    if (tab === "monthly") {
+      handleExportMonthlyCSV();
+    } else if (tab === "stock") {
+      handleExportStockCSV();
+    } else if (tab === "kategori") {
+      handleExportCategoriesCSV();
+    } else if (tab === "dailySales") {
+      handleExportDailySalesCSV();
+    } else if (tab === "realtime") {
+      handleStokRealtimeExportCSV();
+    } else if (tab === "productByMember") {
+      exportSalesMemberToCSV();
+    } else if (tab === "approve") {
+      handleApproveStockExportCSV();
+    }
+  };
 
   // Print penjualan per item
   const handlePrintMonthlyReport = () => {
@@ -600,12 +626,17 @@ const handleExport = () => {
     printFrame.style.top = '-1000px';
     printFrame.style.left = '-1000px';
     document.body.appendChild(printFrame);
-  
+
     const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
     const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
     const startDate = format(dateRange.from, 'dd MMMM yyyy', { locale: id });
     const endDate = format(dateRange.to, 'dd MMMM yyyy', { locale: id });
-  
+    // const fileName = `Laporan_${outletName}_${startDate}_sd_${endDate}.pdf`;
+    // <title>Laporan_Kifa_${outletName}_${startDate}_sd_${endDate}</title>
+
+
+    // pdf.save(fileName);
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -764,13 +795,13 @@ const handleExport = () => {
       </body>
       </html>
     `;
-  
+
     const frameDoc = printFrame.contentWindow.document;
     frameDoc.open();
     frameDoc.write(printContent);
     frameDoc.close();
-  
-    printFrame.onload = function() {
+
+    printFrame.onload = function () {
       setTimeout(() => {
         try {
           printFrame.contentWindow.focus();
@@ -786,100 +817,100 @@ const handleExport = () => {
     };
   };
 
-    // export penjualan per item
-    const handleExportMonthlyCSV = () => {
-      if (!productsData || !productsData.length) return;
-    
-      // Header dengan informasi laporan
-      const reportHeader = [
-        ['LAPORAN PRODUK BERDASARKAN RENTANG TANGGAL'],
-        [`Outlet: ${currentOutlet?.name || 'Semua Outlet'}`],
-        [`Periode: ${format(dateRange.from, 'dd MMMM yyyy', { locale: id })} - ${format(dateRange.to, 'dd MMMM yyyy', { locale: id })}`],
-        [`Tanggal Ekspor: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
-        [], // Baris kosong untuk spacing
-      ];
-    
-      // Header ringkasan
-      // const summaryHeader = ['RINGKASAN'];
-      // const summaryData = [
-      //   ['Total Penjualan (Rp)', `Rp ${summaryData.total_sales.toLocaleString('id-ID')}`],
-      //   ['Total Kuantitas', summaryData.total_quantity.toLocaleString('id-ID')],
-      //   ['Total Transaksi', summaryData.total_orders.toLocaleString('id-ID')],
-      //   ['Rata-rata per Transaksi (Rp)', `Rp ${summaryData.average_order_value.toLocaleString('id-ID')}`],
-      // ];
-    
-      // // Format untuk data ringkasan
-      // const formattedSummaryData = summaryData.map(row => row.join(','));
-      
-      // Baris kosong untuk spacing
-      const spacing = [''];
-    
-      // Data produk
-      const productsHeader = ['DATA PRODUK'];
-      const productsColumns = [
-        'No', 
-        'SKU', 
-        'Nama Item', 
-        'Jenis',
-        // 'Jumlah Order',
-        'Jumlah Satuan',
-        'Total Harga (Rp)',
-        // 'Kontribusi (%)'
-      ];
-      
-      const productsRows = productsData.map((product, index) => [
-        index + 1,
-        product.sku,
-        product.product_name,
-        product.category_name || '-',
-        product.order_count,
-        product.total_quantity,
-        product.total_sales,
-        // product.sales_percentage
-      ]);
-    
-      // Format angka dengan separator ribuan
-      const formattedProductsRows = productsRows.map(row => [
-        row[0], // No
-        `"${row[1]}"`, // SKU
-        `"${row[2]}"`, // Nama Produk
-        `"${row[3]}"`, // Kategori
-        // `"${row[4].toLocaleString('id-ID')}"`, // Jumlah Order
-        `"${row[5].toLocaleString('id-ID')}"`, // Total Kuantitas
-        `"Rp ${row[6].toLocaleString('id-ID')}"`, // Total Penjualan
-        // `"${row[7]}%"`, // Kontribusi
-      ]);
-    
-      // Gabungkan semua bagian
-      const csvContent = [
-        ...reportHeader,
-        // summaryHeader,
-        // ...formattedSummaryData,
-        summaryData,
-        spacing,
-        productsHeader,
-        productsColumns,
-        ...formattedProductsRows,
-      ]
-        .map(row => Array.isArray(row) ? row.join(',') : row)
-        .join('\n');
-    
-      // Create and download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `Laporan_Produk_${currentOutlet?.name || 'All'}_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
+  // export penjualan per item
+  const handleExportMonthlyCSV = () => {
+    if (!productsData || !productsData.length) return;
+
+    // Header dengan informasi laporan
+    const reportHeader = [
+      ['LAPORAN PRODUK BERDASARKAN RENTANG TANGGAL'],
+      [`Outlet: ${currentOutlet?.name || 'Semua Outlet'}`],
+      [`Periode: ${format(dateRange.from, 'dd MMMM yyyy', { locale: id })} - ${format(dateRange.to, 'dd MMMM yyyy', { locale: id })}`],
+      [`Tanggal Ekspor: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
+      [], // Baris kosong untuk spacing
+    ];
+
+    // Header ringkasan
+    // const summaryHeader = ['RINGKASAN'];
+    // const summaryData = [
+    //   ['Total Penjualan (Rp)', `Rp ${summaryData.total_sales.toLocaleString('id-ID')}`],
+    //   ['Total Kuantitas', summaryData.total_quantity.toLocaleString('id-ID')],
+    //   ['Total Transaksi', summaryData.total_orders.toLocaleString('id-ID')],
+    //   ['Rata-rata per Transaksi (Rp)', `Rp ${summaryData.average_order_value.toLocaleString('id-ID')}`],
+    // ];
+
+    // // Format untuk data ringkasan
+    // const formattedSummaryData = summaryData.map(row => row.join(','));
+
+    // Baris kosong untuk spacing
+    const spacing = [''];
+
+    // Data produk
+    const productsHeader = ['DATA PRODUK'];
+    const productsColumns = [
+      'No',
+      'SKU',
+      'Nama Item',
+      'Jenis',
+      // 'Jumlah Order',
+      'Jumlah Satuan',
+      'Total Harga (Rp)',
+      // 'Kontribusi (%)'
+    ];
+
+    const productsRows = productsData.map((product, index) => [
+      index + 1,
+      product.sku,
+      product.product_name,
+      product.category_name || '-',
+      product.order_count,
+      product.total_quantity,
+      product.total_sales,
+      // product.sales_percentage
+    ]);
+
+    // Format angka dengan separator ribuan
+    const formattedProductsRows = productsRows.map(row => [
+      row[0], // No
+      `"${row[1]}"`, // SKU
+      `"${row[2]}"`, // Nama Produk
+      `"${row[3]}"`, // Kategori
+      // `"${row[4].toLocaleString('id-ID')}"`, // Jumlah Order
+      `"${row[5].toLocaleString('id-ID')}"`, // Total Kuantitas
+      `"Rp ${row[6].toLocaleString('id-ID')}"`, // Total Penjualan
+      // `"${row[7]}%"`, // Kontribusi
+    ]);
+
+    // Gabungkan semua bagian
+    const csvContent = [
+      ...reportHeader,
+      // summaryHeader,
+      // ...formattedSummaryData,
+      summaryData,
+      spacing,
+      productsHeader,
+      productsColumns,
+      ...formattedProductsRows,
+    ]
+      .map(row => Array.isArray(row) ? row.join(',') : row)
+      .join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Laporan_Produk_Per_Item_${currentOutlet?.name || 'All'}_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   //export stock
   const handleExportStockCSV = () => {
     if (!inventoryData?.data) return;
-  
+
     // Informasi header dengan logo (placeholder)
     const companyInfo = [
       // ['KIFA BAKERY', '', '', '', '', ''],
@@ -888,12 +919,12 @@ const handleExport = () => {
       // ['', '', '', '', '', `Tanggal Ekspor: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
       [], // Baris kosong
     ];
-  
+
     // Header tabel
     const tableHeader = [
       ['No', 'Produk', 'Saldo Awal', 'Stock Masuk', 'Stock Keluar', 'Stock Akhir'],
     ];
-  
+
     // Data produk
     const tableRows = inventoryData.data.products.map((product, index) => [
       index + 1,
@@ -903,18 +934,18 @@ const handleExport = () => {
       product.stock_keluar,
       product.stock_akhir,
     ]);
-  
+
     // Footer dengan summary
     const tableFooter = [
       [], // Baris kosong
-      ['TOTAL', '', 
-       inventoryData.data.summary.total_saldo_awal,
-       inventoryData.data.summary.total_stock_masuk,
-       inventoryData.data.summary.total_stock_keluar,
-       inventoryData.data.summary.total_stock_akhir
+      ['TOTAL', '',
+        inventoryData.data.summary.total_saldo_awal,
+        inventoryData.data.summary.total_stock_masuk,
+        inventoryData.data.summary.total_stock_keluar,
+        inventoryData.data.summary.total_stock_akhir
       ],
     ];
-  
+
     // Gabungkan semua bagian
     const csvContent = [
       ...companyInfo,
@@ -922,7 +953,7 @@ const handleExport = () => {
       ...tableRows,
       ...tableFooter,
     ]
-      .map(row => 
+      .map(row =>
         row.map(cell => {
           // Handle nilai number untuk format Excel
           if (typeof cell === 'number') return cell;
@@ -932,15 +963,15 @@ const handleExport = () => {
         }).join(',')
       )
       .join('\n');
-  
+
     // Create and download file
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute(
-      'download', 
+      'download',
       `Laporan_Stok_${inventoryData.data.outlet.replace(/ /g, '_') || 'All'}_${format(new Date(), 'yyyyMMdd')}.csv`
     );
     document.body.appendChild(link);
@@ -955,12 +986,12 @@ const handleExport = () => {
     printFrame.style.top = '-1000px';
     printFrame.style.left = '-1000px';
     document.body.appendChild(printFrame);
-  
+
     const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
     const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
     const startDate = format(dateRange.from, 'dd MMMM yyyy', { locale: id });
     const endDate = format(dateRange.to, 'dd MMMM yyyy', { locale: id });
-  
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -1189,13 +1220,13 @@ const handleExport = () => {
       </body>
       </html>
     `;
-  
+
     const frameDoc = printFrame.contentWindow.document;
     frameDoc.open();
     frameDoc.write(printContent);
     frameDoc.close();
-  
-    printFrame.onload = function() {
+
+    printFrame.onload = function () {
       setTimeout(() => {
         try {
           printFrame.contentWindow.focus();
@@ -1214,7 +1245,7 @@ const handleExport = () => {
   //export penjualan per kategori
   const handleExportCategoriesCSV = () => {
     if (!data?.data?.categories || !data.data.categories.length) return;
-  
+
     // Header dengan informasi laporan
     const reportHeader = [
       ['LAPORAN PENJUALAN PER KATEGORI'],
@@ -1223,7 +1254,7 @@ const handleExport = () => {
       [`Tanggal Ekspor: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
       [], // Baris kosong untuk spacing
     ];
-  
+
     // Header ringkasan
     const summaryHeader = ['RINGKASAN'];
     const summaryData = [
@@ -1232,13 +1263,13 @@ const handleExport = () => {
       ['Total Kuantitas', data.data.summary.total_quantity],
       ['Total Penjualan (Rp)', `Rp ${Number(data.data.summary.total_sales).toLocaleString('id-ID')}`],
     ];
-  
+
     // Format untuk data ringkasan
     const formattedSummaryData = summaryData.map(row => row.join(','));
-    
+
     // Baris kosong untuk spacing
     const spacing = [''];
-  
+
     // Gabungkan semua bagian
     let csvContent = [
       ...reportHeader,
@@ -1246,7 +1277,7 @@ const handleExport = () => {
       ...formattedSummaryData,
       spacing,
     ];
-  
+
     // Tambahkan data untuk setiap kategori
     data.data.categories.forEach(category => {
       // Header kategori
@@ -1257,19 +1288,19 @@ const handleExport = () => {
         `Jumlah Produk: ${category.products.length}`
       ]);
       csvContent.push(spacing);
-  
+
       // Kolom data produk per kategori
       csvContent.push([
-        'No', 
+        'No',
         'Nama Item',
         'Jenis',
-        'SKU', 
+        'SKU',
         'Jumlah',
         'Satuan',
         'Total Harga (Rp)',
         // 'Persentase dari Kategori (%)'
       ]);
-      
+
       // Data produk per kategori
       category.products.forEach((product, index) => {
         csvContent.push([
@@ -1283,21 +1314,21 @@ const handleExport = () => {
           // `"${product.sales_percentage.toFixed(2)}%"`
         ]);
       });
-      
+
       csvContent.push(spacing);
       csvContent.push(spacing);
     });
-  
+
     // Ubah array menjadi format CSV
     const csvString = csvContent
       .map(row => Array.isArray(row) ? row.join(',') : row)
       .join('\n');
-  
+
     // Create and download file
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `Laporan_Kategori_${currentOutlet?.name || 'All'}_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.csv`);
     document.body.appendChild(link);
@@ -1312,11 +1343,11 @@ const handleExport = () => {
     printFrame.style.top = '-1000px';
     printFrame.style.left = '-1000px';
     document.body.appendChild(printFrame);
-  
+
     const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
     const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
     const reportDate = date ? format(date, 'dd MMMM yyyy', { locale: id }) : format(new Date(), 'dd MMMM yyyy', { locale: id });
-  
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -1536,12 +1567,12 @@ const handleExport = () => {
       </body>
       </html>
     `;
-  
+
     const frameDoc = printFrame.contentWindow.document;
     frameDoc.open();
     frameDoc.write(printContent);
     frameDoc.close();
-  
+
     printFrame.onload = function () {
       setTimeout(() => {
         try {
@@ -1557,7 +1588,7 @@ const handleExport = () => {
       }, 500);
     };
   };
-  
+
   //export penjualan harian
   const handleExportDailySalesCSV = () => {
     // Verifikasi bahwa data penjualan tersedia
@@ -1566,17 +1597,17 @@ const handleExport = () => {
       // toast.error('Data penjualan tidak tersedia untuk di-export');
       return;
     }
-  
+
     try {
       // Header untuk File CSV
       let csvContent = 'Order ID,Tanggal,Waktu,Kasir,Metode Pembayaran,Produk,SKU,Harga,Kuantitas,Subtotal,Total Order\n';
-  
+
       // Data untuk File CSV
       salesData.data.orders.forEach(order => {
         const orderDate = order.order_time.split(' ')[0]; // Mengasumsikan format "YYYY-MM-DD HH:MM:SS"
         // const orderTime = order.order_time.split(' ')[1];
         const paymentMethod = order.payment_method === 'cash' ? 'Tunai' : 'Non-Tunai';
-        
+
         // Jika order memiliki items
         if (order.items && order.items.length > 0) {
           order.items.forEach((item, index) => {
@@ -1586,10 +1617,10 @@ const handleExport = () => {
             const price = item.unit_price;
             const quantity = item.quantity;
             const subtotal = item.unit_price * item.quantity;
-            
+
             // Hanya tambahkan total order pada baris pertama dari setiap order
             const totalOrder = index === 0 ? order.total : '';
-            
+
             // Baris CSV untuk setiap item
             csvContent += `"${order.order_id}","${orderDate}","${order.cashier}","${paymentMethod}","${productName}","${productSKU}",${price},${quantity},${subtotal},${totalOrder}\n`;
           });
@@ -1598,31 +1629,31 @@ const handleExport = () => {
           csvContent += `"${order.order_id}","${orderDate}","${orderTime}","${order.cashier}","${paymentMethod}","","","","","",${order.total}\n`;
         }
       });
-  
+
       // Tambahkan baris ringkasan penjualan
       csvContent += `\n"RINGKASAN PENJUALAN"\n`;
       csvContent += `"Total Penjualan",${salesData.data.summary.total_sales}\n`;
       csvContent += `"Total Order",${salesData.data.summary.total_orders}\n`;
       csvContent += `"Total Item",${salesData.data.summary.total_items}\n`;
       csvContent += `"Rata-rata Order",${salesData.data.summary.average_order_value}\n`;
-  
+
       // Buat Blob dari CSV content
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      
+
       // Buat nama file berdasarkan tanggal
-      const reportDate = date 
-        ? format(date, 'yyyy-MM-dd', { locale: id }) 
+      const reportDate = date
+        ? format(date, 'yyyy-MM-dd', { locale: id })
         : format(new Date(), 'yyyy-MM-dd', { locale: id });
       const outletInfo = currentOutlet ? `_${currentOutlet.name.replace(/\s+/g, '_')}` : '_Semua_Outlet';
       const fileName = `Laporan_Penjualan_Harian${outletInfo}_${reportDate}.csv`;
-  
+
       // Download file dengan FileSaver.js jika tersedia atau metode native
       if (window.saveAs) {
         window.saveAs(blob, fileName);
       } else {
         // Pendekatan native browser untuk download
         const link = document.createElement('a');
-        
+
         // Cek apakah browser mendukung URL.createObjectURL
         if (window.URL && window.URL.createObjectURL) {
           link.href = window.URL.createObjectURL(blob);
@@ -1638,7 +1669,7 @@ const handleExport = () => {
           toast.error('Browser tidak mendukung download CSV');
         }
       }
-  
+
       // toast.success('Export CSV berhasil');
     } catch (error) {
       console.error('Gagal export CSV:', error);
@@ -1646,15 +1677,1013 @@ const handleExport = () => {
     }
   };
 
-// penjualan
+  const { data: reportsData } = useApprovalReports(
+    currentOutlet?.id ?? 0,
+    dateRangeApprove?.from ? format(dateRangeApprove.from, 'yyyy-MM-dd') : '',
+    dateRangeApprove?.to ? format(dateRangeApprove.to, 'yyyy-MM-dd') : ''
+  )
+
+  console.log({ reportsData })
+
+  // Pastikan struktur data default
+  const reports = {
+    approved: reportsData?.approved || [],
+    rejected: reportsData?.rejected || []
+  };
+
+  const handlePrintApproveReport = () => {
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'absolute';
+    printFrame.style.top = '-1000px';
+    printFrame.style.left = '-1000px';
+    document.body.appendChild(printFrame);
+
+    const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
+    const reportDate = dateRangeApprove?.from ?
+      `${format(dateRangeApprove.from, 'dd MMM yyyy', { locale: id })} - ${dateRangeApprove.to ? format(dateRangeApprove.to, 'dd MMM yyyy', { locale: id }) : ''}`
+      : 'Semua Periode';
+
+    // Fungsi helper untuk handle data kosong
+    const renderTableRows = (items: any[]) => {
+      if (!items || items.length === 0) {
+        return `<tr><td colspan="6" style="text-align: center; color: #666;">Tidak ada data</td></tr>`;
+      }
+
+      return items.map(item => `
+  <tr>
+    <td>${item.approved_at ? format(new Date(item.approved_at), "dd MMM yyyy", { locale: id }) : '-'}</td>
+    <td>${item.product?.sku || '-'}</td>
+    <td>${item.product?.name || '-'}</td>
+    <td style="color: ${item.quantity_change > 0 ? '#137333' : '#a50e0e'}">
+      ${item.quantity_change > 0 ? `+${item.quantity_change}` : (item.quantity_change ?? 0)}
+    </td>
+    <td>${item.notes || '-'}</td>
+    <td>${item.approver?.name || '-'}</td>
+  </tr>
+`).join('');
+    };
+    const printContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Laporan Penyesuaian Stok</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 15px; color: #333; }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #ddd;
+    }
+    .logo-container {
+      width: 70px;
+      margin-right: 15px;
+    }
+    .logo {
+      width: 100%;
+      height: auto;
+    }
+    .header-content {
+      flex: 1;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 3px;
+    }
+    .date {
+      font-size: 12px;
+      color: #777;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 25px 0 15px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #333;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .approved { background-color: #e6f4ea; color: #137333; }
+    .rejected { background-color: #fce8e6; color: #a50e0e; }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+    @media print {
+      body { -webkit-print-color-adjust: exact; }
+      th, .status-badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-container">
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png"
+           alt="Logo Kifa"
+           class="logo">
+    </div>
+    <div class="header-content">
+      <div class="title">LAPORAN PERSETUJUAN PENYESUAIAN STOK</div>
+      <div class="subtitle">Periode: ${reportDate}</div>
+      <div class="date">Dicetak pada: ${currentDate}</div>
+    </div>
+  </div>
+
+  <div class="section-title">Penyesuaian Disetujui</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>SKU</th>
+        <th>Nama Item</th>
+        <th>Perubahan</th>
+        <th>Keterangan</th>
+        <th>Disetujui Oleh</th>
+      </tr>
+    </thead>
+    <tbody>
+    ${reports?.approved?.length > 0
+        ? reports.approved.map(item => `
+        <tr>
+          <td>${item.approved_at ? format(new Date(item.approved_at), "dd MMM yyyy", { locale: id }) : '-'}</td>
+          <td>${item.product?.sku || '-'}</td>
+          <td>${item.product?.name || '-'}</td>
+          <td style="color: ${item.quantity_change > 0 ? '#137333' : '#a50e0e'}">
+            ${item.quantity_change > 0 ? `+${item.quantity_change}` : (item.quantity_change ?? 0)}
+          </td>
+          <td>${item.notes || '-'}</td>
+          <td>${item.approver?.name || '-'}</td>
+        </tr>
+      `).join('')
+        : `<tr><td colspan="6" style="text-align: center; color: #666;">Tidak ada data</td></tr>`}
+  </tbody>
+  </table>
+
+  <div class="section-title">Penyesuaian Ditolak</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>SKU</th>
+        <th>Nama Item</th>
+        <th>Perubahan</th>
+        <th>Keterangan</th>
+        <th>Ditolak Oleh</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${reports?.rejected?.length > 0
+        ? reports.rejected.map(item => `
+          <tr>
+            <td>${item.approved_at ? format(new Date(item.approved_at), "dd MMM yyyy", { locale: id }) : '-'}</td>
+            <td>${item.product?.sku || '-'}</td>
+            <td>${item.product?.name || '-'}</td>
+            <td style="color: ${item.quantity_change > 0 ? '#137333' : '#a50e0e'}">
+              ${item.quantity_change > 0 ? `+${item.quantity_change}` : item.quantity_change}
+            </td>
+            <td>${item.notes || '-'}</td>
+            <td>${item.approver?.name || '-'}</td>
+          </tr>
+        `).join('')
+        : `<tr><td colspan="6" style="text-align: center; color: #666;">Tidak ada data</td></tr>`}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <p>Laporan ini dibuat secara otomatis oleh sistem.</p>
+    <p>© ${new Date().getFullYear()} Kifa Bakery</p>
+  </div>
+</body>
+</html>
+`;
+
+    const frameDoc = printFrame.contentDocument || printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(printContent);
+    frameDoc.close();
+
+    // Tunggu sampai iframe selesai dimuat
+    printFrame.onload = function () {
+      // Jalankan perintah print
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+
+      // Hapus iframe setelah print selesai
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 1000);
+    };
+  };
+  //export approve stock
+  const handleApproveStockExportCSV = () => {
+    const approvedData = reports?.approved || [];
+    const rejectedData = reports?.rejected || [];
+
+    if (approvedData.length === 0 && rejectedData.length === 0) {
+      alert('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    // 1. Tambahkan metadata Excel di awal file
+    const excelMetadata = [
+      'sep=,', // Memastikan Excel menggunakan comma sebagai delimiter
+      '"Format Table Excel"', // Judul dummy untuk trigger autoformat
+    ];
+
+    // 2. Header dengan format khusus untuk Excel
+    const reportHeader = [
+      ['=== LAPORAN PENYESUAIAN STOK ==='],
+      ['Periode', `: ${dateRangeApprove?.from ? format(dateRangeApprove.from, 'dd MMMM yyyy', { locale: id }) : '-'} - ${date?.to ? format(date.to, 'dd MMMM yyyy', { locale: id }) : '-'}`],
+      ['Tanggal Ekspor', `: ${format(new Date(), 'dd MMMM yyyy HH:mm', { locale: id })}`],
+      ['\t'], // Tab character untuk trigger Excel membuat empty row
+    ];
+
+    // 3. Fungsi pembuat tabel dengan Excel-friendly format
+    const createExcelTable = (data, title) => {
+      if (data.length === 0) return [];
+
+      return [
+        [`=== ${title.toUpperCase()} ===`],
+        // Gunakan karakter khusus untuk header table
+        ['\tNo\t', '\tTanggal\t', '\tSKU\t', '\tNama Item\t', '\tPerubahan Stok\t', '\tKeterangan\t', '\tPenanggung Jawab\t'],
+        ...data.map((item, index) => [
+          `\t${index + 1}\t`,
+          `\t${item.approved_at ? format(new Date(item.approved_at), 'dd MMMM yyyy', { locale: id }) : '-'}\t`,
+          `\t${item.product?.sku || '-'}\t`,
+          `\t${item.product?.name || '-'}\t`,
+          `\t${item.quantity_change > 0 ? `+${item.quantity_change}` : item.quantity_change}\t`,
+          `\t${item.notes || '-'}\t`,
+          `\t${item.approver?.name || '-'}\t`
+        ]),
+        ['\t'] // Empty row
+      ];
+    };
+
+    // 4. Gabungkan semua konten
+    const csvContent = [
+      ...excelMetadata,
+      ...reportHeader,
+      ...createExcelTable(approvedData, 'Disetujui'),
+      ...createExcelTable(rejectedData, 'Ditolak')
+    ];
+
+    // 5. Konversi ke CSV string
+    const csvString = csvContent
+      .map(row => Array.isArray(row) ? row.join(',') : row)
+      .join('\n');
+
+    // 6. Download dengan trik khusus untuk Excel
+    const blob = new Blob(["\ufeff", csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Laporan_Penyesuaian_Stok_${format(new Date(), 'yyyyMMdd')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const queryStock = getRealtimeStock(currentOutlet?.id || 1)
+  const { data: stockData } = queryStock()
+
+  //print stok realtime
+  const handlePrintStockRealTimeReport = () => {
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'absolute';
+    printFrame.style.top = '-1000px';
+    printFrame.style.left = '-1000px';
+    document.body.appendChild(printFrame);
+
+    const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
+    const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
+
+    // Kelompokkan stok berdasarkan jenis
+    const groupedStock = stockData?.data.reduce((acc, product) => {
+      product.stock_by_type?.forEach(stock => {
+        if (!acc[stock.type]) {
+          acc[stock.type] = {
+            name: stock.type === 'purchase' ? 'Pembelian' :
+              stock.type === 'sale' ? 'Penjualan' :
+                stock.type === 'adjustment' ? 'Penyesuaian' :
+                  stock.type === 'other' ? 'Lainya' :
+                    stock.type === 'shipment' ? 'Pengiriman' :
+                      stock.type === 'transfer_in' ? 'Transfer Masuk' :
+                        stock.type === 'transfer_out' ? 'Transfer Keluar' :
+                          'Stock Opname',
+            products: []
+          };
+        }
+        acc[stock.type].products.push({
+          product,
+          stock
+        });
+      });
+      return acc;
+    }, {});
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Laporan Stok Realtime</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            color: #333; 
+            font-size: 14px;
+          }
+          .header { 
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+          }
+          .logo-container {
+            width: 70px;
+            margin-right: 15px;
+          }
+          .logo {
+            width: 100%;
+            height: auto;
+          }
+          .title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .subtitle {
+            font-size: 13px;
+            color: #555;
+          }
+          .date {
+            font-size: 12px;
+            color: #777;
+            margin-top: 10px;
+          }
+          .stock-group {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+          }
+          .group-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin: 15px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+          }
+          th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          th {
+            background-color:rgb(255, 255, 255);
+            font-weight: bold;
+          }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .badge {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+          }
+          .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+          }
+          @media print {
+            body { padding: 15px; }
+            .stock-group { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo-container">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png"
+                 alt="Logo Kifa"
+                 class="logo">
+          </div>
+          <div class="header-content">
+            <div class="title">LAPORAN STOK REAL TIME</div>
+            <div class="subtitle">Outlet: ${outletName}</div>
+            <div class="date">Dicetak pada: ${currentDate}</div>
+          </div>
+        </div>
+  
+        ${groupedStock ? Object.entries(groupedStock).map(([type, group]) => `
+          <div class="stock-group">
+            <div class="group-title">
+              ${group.name} (${group.products.length} produk)
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Produk</th>
+                  <th>Kategori</th>
+                  <th class="text-right">Stok</th>
+                  <th class="text-right">Perubahan</th>
+                  <th>Status</th>
+                  <th>Tanggal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${group.products.map(({ product, stock }) => `
+                  <tr>
+                    <td>
+                      <div>${product.product.name}</div>
+                      <div style="font-size:12px;color:#666;">${product.product.sku}</div>
+                    </td>
+                    <td>${product.product.category.name}</td>
+                    <td class="text-right">
+                      ${product.quantity} ${product.product.unit}
+                    </td>
+                    <td class="text-right">
+                      <span style="color:${stock.quantity_change > 0 ? 'green' : 'red'}">
+                        ${stock.quantity_change > 0 ? '+' : ''}${stock.quantity_change}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge">
+                        ${stock.status === 'approved' ? 'Disetujui' : 'Pending'}
+                      </span>
+                    </td>
+                    <td>${format(new Date(stock.created_at), "dd MMM yy", { locale: id })}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('') : `
+          <div class="text-center" style="margin:30px 0;color:#666;">
+            Tidak ada data stok yang tersedia
+          </div>
+        `}
+  
+        <div class="footer">
+          <p>Laporan ini dibuat secara otomatis oleh sistem</p>
+          <p>© ${new Date().getFullYear()} Kifa Bakery</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const frameDoc = printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(printContent);
+    frameDoc.close();
+
+    printFrame.onload = function () {
+      setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 1000);
+      }, 500);
+    };
+  };
+
+  //export stok realtime
+  const handleStokRealtimeExportCSV = () => {
+    // Jika tidak ada data, tampilkan alert
+    if (!stockData?.data || stockData.data.length === 0) {
+      alert('Tidak ada data stok untuk diekspor');
+      return;
+    }
+
+    // Header CSV
+    const headers = [
+      'Nama Produk',
+      'SKU',
+      'Kategori',
+      'Stok Saat Ini',
+      'Satuan',
+      'Minimal Stok',
+      'Status Stok',
+      'Jenis Transaksi Terakhir',
+      'Perubahan Stok',
+      'Stok Setelah',
+      'Status Transaksi',
+      'Catatan',
+      'Tanggal Update',
+      'Outlet'
+    ];
+
+    // Data CSV
+    const csvData = stockData.data.map(item => {
+      // Ambil transaksi terakhir jika ada
+      const lastTransaction = item.stock_by_type?.[0] || {};
+
+      // Tentukan status stok
+      let stockStatus = '';
+      if (item.quantity >= item.min_stock) {
+        stockStatus = 'Normal';
+      } else if (item.quantity < item.min_stock && item.quantity > 0) {
+        stockStatus = 'Rendah';
+      } else {
+        stockStatus = 'Habis';
+      }
+
+      // Tentukan jenis transaksi
+      const transactionType = lastTransaction.type ?
+        lastTransaction.type === 'purchase' ? 'Pembelian' :
+          lastTransaction.type === 'sale' ? 'Penjualan' :
+            lastTransaction.type === 'adjustment' ? 'Penyesuaian' :
+              lastTransaction.type === 'transfer_in' ? 'Transfer Masuk' :
+                lastTransaction.type === 'transfer_out' ? 'Transfer Keluar' :
+                  'Stock Opname' : '-';
+
+      return [
+        `"${item.product.name}"`, // Gunakan quotes untuk handle koma dalam nama produk
+        `"${item.product.sku}"`,
+        `"${item.product.category.name}"`,
+        item.quantity,
+        `"${item.product.unit}"`,
+        item.min_stock,
+        stockStatus,
+        transactionType,
+        lastTransaction.quantity_change || 0,
+        lastTransaction.quantity_after || item.quantity,
+        lastTransaction.status === 'approved' ? 'Disetujui' : (lastTransaction.status || '-'),
+        `"${lastTransaction.notes || '-'}"`,
+        format(new Date(item.updated_at), "dd MMM yyyy HH:mm", { locale: id }),
+        `"${currentOutlet?.name || 'Semua Outlet'}"`
+      ];
+    });
+
+    // Gabungkan header dan data
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(','))
+    ].join('\n');
+
+    // Buat blob dan download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute(
+      'download',
+      `Laporan_Stok_RealTime_${currentOutlet?.name || 'Semua_Outlet'}_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  //print penjualan per member
+  const handlePrintSalesMemberReport = async () => {
+
+    try {
+      // Validate date range
+      if (!dateRangeMember.from || !dateRangeMember.to) {
+        toast({
+          title: "Error",
+          description: "Silakan pilih rentang tanggal terlebih dahulu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Show loading state
+      setIsLoading(true);
+
+      // const apiStartDate = format(dateRange.from, 'yyyy-MM-dd');
+      // const apiEndDate = format(dateRange.to, 'yyyy-MM-dd');
+
+      // Fetch data with proper parameters
+      const response = await getProductByMember({
+        outletId: currentOutlet?.id || outletId,
+        dateRange: {
+          start_date: format(dateRangeMember.from, 'yyyy-MM-dd'),
+          end_date: format(dateRangeMember.to, 'yyyy-MM-dd'),
+          // start_date: new Date(apiStartDate),
+          // end_date: new Date(apiEndDate)
+        }
+      });
+
+      if (!response?.data) {
+        toast({
+          title: "Error",
+          description: "Tidak ada data yang tersedia untuk dicetak",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (response.data.date_range) {
+        // const resStart = new Date(response.data.date_range.start_date);
+        // const resEnd = new Date(response.data.date_range.end_date);
+
+        const formatDateForCompare = (date) => format(new Date(date), 'yyyy-MM-dd');
+
+        const inputStartDate = formatDateForCompare(dateRange.from);
+        const inputEndDate = formatDateForCompare(dateRange.to);
+        const responseStartDate = formatDateForCompare(response.data.date_range.start_date);
+        const responseEndDate = formatDateForCompare(response.data.date_range.end_date);
+
+        if (responseStartDate !== inputStartDate || responseEndDate !== inputEndDate) {
+          toast({
+            title: "Peringatan",
+            description: "Data yang ditampilkan mungkin tidak sesuai dengan periode yang dipilih",
+            variant: "default",
+          });
+        }
+      }
+
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.top = '-1000px';
+      printFrame.style.left = '-1000px';
+      document.body.appendChild(printFrame);
+
+      // Format dates using date-fns with Indonesian locale
+      const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
+      const startDate = format(dateRangeMember.from, 'dd MMM yyyy', { locale: id });
+      const endDate = format(dateRangeMember.to, 'dd MMM yyyy', { locale: id });
+
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Laporan Penjualan Per Pelanggan</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              padding: 20px; 
+              color: #333; 
+              font-size: 14px;
+            }
+            .header { 
+              margin-bottom: 20px;
+              padding-bottom: 15px;
+              border-bottom: 1px solid #ddd;
+            }
+            .title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .subtitle {
+              font-size: 13px;
+              color: #555;
+            }
+            .date {
+              font-size: 12px;
+              color: #777;
+              margin-top: 10px;
+            }
+            .summary-cards {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 15px;
+              margin-bottom: 20px;
+            }
+            .summary-card {
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              padding: 12px;
+              background-color: #f9f9f9;
+            }
+            .summary-label {
+              font-size: 12px;
+              color: #666;
+              margin-bottom: 5px;
+            }
+            .summary-value {
+              font-weight: bold;
+              font-size: 16px;
+            }
+            .member-card {
+              margin-bottom: 30px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              page-break-inside: avoid;
+            }
+            .member-header {
+              padding: 12px 15px;
+              background-color: #f5f5f5;
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 1px solid #ddd;
+            }
+            .member-name {
+              font-weight: bold;
+            }
+            .member-stats {
+              text-align: right;
+            }
+            .total-sales {
+              font-weight: bold;
+            }
+            .sales-percentage {
+              font-size: 12px;
+              color: #555;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              padding: 8px;
+              text-align: left;
+              border-bottom: 1px solid #ddd;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+            .text-right { text-align: right; }
+            .footer {
+              margin-top: 30px;
+              padding-top: 15px;
+              border-top: 1px solid #eee;
+              font-size: 12px;
+              color: #666;
+              text-align: center;
+            }
+            @media print {
+              body { padding: 15px; }
+              .member-card { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">LAPORAN PENJUALAN PER PELANGGAN</div>
+            <div class="subtitle">Outlet: ${currentOutlet?.name || 'Semua Outlet'}</div>
+            <div class="subtitle">Periode: ${startDate} - ${endDate}</div>
+            <div class="date">Dicetak pada: ${currentDate}</div>
+          </div>
+  
+          ${response.data.summary ? `
+            <div class="summary-cards">
+              <div class="summary-card">
+                <div class="summary-label">Total Penjualan</div>
+                <div class="summary-value">Rp ${Number(response.data.summary.total_sales).toLocaleString('id-ID')}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">Total Transaksi</div>
+                <div class="summary-value">${response.data.summary.total_orders}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">Rata-rata Transaksi</div>
+                <div class="summary-value">Rp ${Number(response.data.summary.average_order_value).toLocaleString('id-ID')}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">Total Pelanggan</div>
+                <div class="summary-value">${response.data.summary.total_members || 0}</div>
+              </div>
+            </div>
+          ` : ''}
+  
+          ${response.data.members?.length > 0 ?
+          response.data.members.map(member => `
+              <div class="member-card">
+                <div class="member-header">
+                  <div>
+                    <div class="member-name">${member.member_name || 'Pelanggan Umum'}</div>
+                    <div>${member.total_orders} transaksi</div>
+                  </div>
+                  <div class="member-stats">
+                    <div class="total-sales">Rp ${Number(member.total_spent).toLocaleString('id-ID')}</div>
+                    ${response.data.summary?.total_sales ? `
+                      <div class="sales-percentage">
+                        ${((member.total_spent / response.data.summary.total_sales) * 100).toFixed(2)}% dari total
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+                
+                ${member.products?.length > 0 ? `
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Produk</th>
+                        <th>Kategori</th>
+                        <th class="text-right">Kuantitas</th>
+                        <th class="text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${member.products.map(product => `
+                        <tr>
+                          <td>${product.product_name}</td>
+                          <td>${product.category}</td>
+                          <td class="text-right">${product.quantity}</td>
+                          <td class="text-right">Rp ${Number(product.total_spent).toLocaleString('id-ID')}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                ` : '<div style="padding: 15px; text-align: center; color: #666;">Tidak ada produk</div>'}
+              </div>
+            `).join('')
+          :
+          '<div style="text-align: center; padding: 20px; color: #666;">Tidak ada data penjualan</div>'
+        }
+  
+          <div class="footer">
+            <p>Laporan ini dibuat secara otomatis oleh sistem</p>
+            <p>© ${new Date().getFullYear()} ${currentOutlet?.name || 'Kifa Bakery'}</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const frameDoc = printFrame.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(printContent);
+      frameDoc.close();
+
+      printFrame.onload = function () {
+        setTimeout(() => {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+          }, 1000);
+        }, 500);
+      };
+
+    } catch (error) {
+      console.error("Print error:", error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data untuk dicetak",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  //export penjualan per member
+  const exportSalesMemberToCSV = async () => {
+    try {
+      if (!dateRangeMember.from || !dateRangeMember.to) {
+        toast({
+          title: "Error",
+          description: "Silakan pilih rentang tanggal terlebih dahulu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsLoading(true);
+
+      const apiStartDate = format(dateRange.from, 'yyyy-MM-dd');
+      const apiEndDate = format(dateRange.to, 'yyyy-MM-dd');
+
+      const response = await getProductByMember({
+        outletId: currentOutlet?.id || outletId,
+        dateRange: {
+          start_date: format(dateRangeMember.from, 'yyyy-MM-dd'),
+          end_date: format(dateRangeMember.to, 'yyyy-MM-dd')
+        }
+      });
+
+      if (!response?.data) {
+        toast({
+          title: "Error",
+          description: "Tidak ada data yang tersedia untuk diekspor",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const totalSales = response.data.summary?.total_sales || 1;
+
+      // Header informasi umum
+      const infoHeader = [
+        ['Periode', `${format(dateRangeMember.from, 'dd/MM/yyyy')} - ${format(dateRangeMember.to, 'dd/MM/yyyy')}`],
+        ['Outlet', currentOutlet?.name || 'Semua Outlet'],
+        [] // Baris kosong sebagai separator
+      ];
+
+      // Header kolom utama
+      const headers = [
+        'Nama Pelanggan',
+        'Total Transaksi',
+        'Total Belanja',
+        'Persentase Kontribusi',
+        'Nama Produk',
+        'Kategori',
+        'Kuantitas',
+        'Total Belanja Produk'
+      ];
+
+      // Data CSV
+      const csvData = [];
+
+      response.data.members?.forEach(member => {
+        member.products?.forEach(product => {
+          csvData.push([
+            `"${member.member_name || 'Pelanggan Umum'}"`,
+            member.total_orders,
+            `"Rp ${Number(member.total_spent).toLocaleString('id-ID')}"`,
+            `"${((member.total_spent / totalSales) * 100).toFixed(2)}%"`,
+            `"${product.product_name}"`,
+            `"${product.category}"`,
+            product.quantity,
+            `"Rp ${Number(product.total_spent).toLocaleString('id-ID')}"`
+          ]);
+        });
+      });
+
+      const csvContent = [
+        ...infoHeader.map(row => row.join(',')),
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute(
+        'download',
+        `Laporan_Penjualan_Pelanggan_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Sukses",
+        description: "Data berhasil diekspor ke CSV",
+        variant: "default",
+      });
+
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Error",
+        description: "Gagal mengeksport data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+
+  // penjualan
   // useEffect(() => {
   //   const fetchMonthlySales = async () => {
   //     setIsLoading(true);
   //     setError(null);
-      
+
   //     try {
   //       const outletParam = selectedOutletId || '1';
-        
+
   //       const response = await fetch(`http://127.0.0.1:8000/api/reports/monthly-sales/${outletParam}`, {
   //         headers: {
   //           'Accept': 'application/json',
@@ -1667,14 +2696,14 @@ const handleExport = () => {
   //       }
 
   //       const result = await response.json();
-        
+
   //       // Check if result and data exist
   //       if (!result?.data) {
   //         throw new Error("Invalid data structure");
   //       }
 
   //       const { data } = result;
-        
+
   //       // Extract summary data with default values if not present
   //       const summary = data.summary || {
   //         total_sales: "0.00",
@@ -1695,7 +2724,7 @@ const handleExport = () => {
   //       }];
 
   //       setMonthlyReportsData(formattedData);
-        
+
   //     } catch (err) {
   //       console.error("Fetch error:", err);
   //       setError(err.message || "Gagal memuat data penjualan");
@@ -1709,36 +2738,36 @@ const handleExport = () => {
 
   const fetchProductsData = async () => {
     if (!selectedOutletId) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Format dates for API
       const startDate = format(dateRange.from, 'yyyy-MM-dd');
       const endDate = format(dateRange.to, 'yyyy-MM-dd');
-      
+
       // Using the endpoint format you provided
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/reports/monthly-sales/${selectedOutletId}?start_date=${startDate}&end_date=${endDate}`, {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
       );
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch product data');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.status && data.data) {
         // Set products data (note the field is 'products' not 'top_products')
         setProductsData(data.data.products || []);
-        
+
         // Set summary data if available
         if (data.data.summary) {
           setSummaryData(data.data.summary);
@@ -1765,7 +2794,7 @@ const handleExport = () => {
   const handleSort = (key) => {
     const direction = sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc';
     setSortConfig({ key, direction });
-    
+
     // Sort the data
     const sortedData = [...productsData].sort((a, b) => {
       if (direction === 'asc') {
@@ -1774,7 +2803,7 @@ const handleExport = () => {
         return a[key] < b[key] ? 1 : -1;
       }
     });
-    
+
     setProductsData(sortedData);
   };
 
@@ -1783,14 +2812,14 @@ const handleExport = () => {
       setError("Harap pilih outlet dan tanggal terlebih dahulu");
       return;
     }
-  
+
     setIsLoading(true);
     setError(null);
-  
+
     try {
       const startDate = format(dateRange.from, 'yyyy-MM-dd');
       const endDate = format(dateRange.to, 'yyyy-MM-dd');
-  
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/reports/monthly-inventory/${selectedOutletId}?start_date=${startDate}&end_date=${endDate}`,
         {
@@ -1800,19 +2829,19 @@ const handleExport = () => {
           },
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-  
+
       const result = await response.json();
       console.log('Full API Response:', result); // Debugging
-  
+
       // Validasi struktur response
       if (!result?.data?.products) {
         throw new Error('Struktur data tidak valid: products tidak ditemukan');
       }
-  
+
       // Format data untuk state
       const formattedData = {
         data: {
@@ -1841,13 +2870,13 @@ const handleExport = () => {
           }
         }
       };
-  
+
       setInventoryData(formattedData);
-  
+
     } catch (err) {
       console.error("Error fetching inventory data:", err);
       setError(err.message || "Gagal memuat data stok");
-      
+
       // Set data kosong jika error
       setInventoryData({
         data: {
@@ -1882,9 +2911,9 @@ const handleExport = () => {
       handleStockChange(newMonth);
     }
   };
-  
 
-  Date.prototype.getWeek = function() {
+
+  Date.prototype.getWeek = function () {
     const firstDayOfYear = new Date(this.getFullYear(), 0, 1);
     return Math.ceil((((this - firstDayOfYear) / 86400000) + firstDayOfYear.getDay() + 1) / 7);
   };
@@ -1896,22 +2925,22 @@ const handleExport = () => {
           Laporan dan Analitik
         </h2>
         <div className="flex items-center space-x-2">
-          <Select value={selectedMonth} onValueChange={handleMonthChange}>
+          {/* <Select value={selectedMonth} onValueChange={handleMonthChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Pilih Bulan" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
 
-              {monthOptions.map((month) => (
-                <SelectItem key={month.value} value={month.value}>
-                  {month.label}
-                </SelectItem>
-              ))}
+                {monthOptions.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={ handlePrint}>
+          </Select> */}
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
             Cetak
           </Button>
@@ -1946,7 +2975,7 @@ const handleExport = () => {
           </TabsList>
         </VisuallyHidden> */}
 
-        
+
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -2268,9 +3297,9 @@ const handleExport = () => {
                 {selectedOutletId !== "all" && currentOutlet && ` di ${currentOutlet.name}`}
               </CardDescription>
               <div className="flex justify-between items-center mt-4">
-                <DateRangePicker 
-                  value={dateRange} 
-                  onChange={handleDateRangeChange} 
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
                 />
                 <Button onClick={handleStockChange}>
                   Terapkan
@@ -2293,25 +3322,25 @@ const handleExport = () => {
                     <h3 className="text-lg font-semibold mb-4">
                       Periode: {inventoryData?.data?.periode.start_date} s/d {inventoryData?.data?.periode.end_date}
                     </h3>
-                    
+
                     <div className="grid grid-cols-4 gap-4 mb-6">
-                      <StatCard 
-                        title="Total Saldo Awal" 
+                      <StatCard
+                        title="Total Saldo Awal"
                         value={`${inventoryData?.data?.summary.total_saldo_awal} pcs`}
                         icon={<PackagePlus className="h-4 w-4" />}
                       />
-                      <StatCard 
-                        title="Total Stock Masuk" 
+                      <StatCard
+                        title="Total Stock Masuk"
                         value={`${inventoryData?.data?.summary.total_stock_masuk} pcs`}
                         icon={<PackageOpen className="h-4 w-4" />}
                       />
-                      <StatCard 
-                        title="Total Stock Keluar" 
+                      <StatCard
+                        title="Total Stock Keluar"
                         value={`${inventoryData?.data?.summary.total_stock_keluar} pcs`}
                         icon={<PackageMinus className="h-4 w-4" />}
                       />
-                      <StatCard 
-                        title="Total Stock Akhir" 
+                      <StatCard
+                        title="Total Stock Akhir"
                         value={`${inventoryData?.data?.summary.total_stock_akhir} pcs`}
                         icon={<PackageCheck className="h-4 w-4" />}
                       />
@@ -2413,7 +3442,7 @@ const handleExport = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="monthly" className="space-y-4">
           <Card>
             <CardHeader>
@@ -2423,9 +3452,9 @@ const handleExport = () => {
                 {selectedOutletId !== "all" && currentOutlet && ` untuk ${currentOutlet.name}`}
               </CardDescription>
               <div className="flex justify-between items-center mt-4">
-                <DateRangePicker 
-                  value={dateRange} 
-                  onChange={handleDateRangeChange} 
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
                 />
                 <Button onClick={fetchProductsData}>
                   Terapkan
@@ -2541,9 +3570,9 @@ const handleExport = () => {
                 Data penjualan produk dikelompokkan per kategori
               </CardDescription>
               <div className="flex justify-between items-center mt-4">
-                <DateRangePicker 
-                  value={dateRange} 
-                  onChange={handleDateRangeChange} 
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
                 />
                 <Button onClick={fetchProductsData}>
                   Terapkan
@@ -2659,7 +3688,7 @@ const handleExport = () => {
                       <div>
                         <p className="text-sm text-gray-500">Total Produk Terjual</p>
                         <p className="font-medium">{data.data.summary.total_products}</p>
-                      </div> 
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Total Kuantitas</p>
                         <p className="font-medium">{data.data.summary.total_quantity}</p>
@@ -2676,7 +3705,14 @@ const handleExport = () => {
               )}
             </CardContent>
           </Card>
-        </TabsContent>  
+        </TabsContent>
+
+        {tab === 'realtime' && <RealtimeStock />}
+
+        {tab === 'approve' && <ApprovalReport date={dateRangeApprove} setDate={setDateRangeApprove} />}
+
+        {tab === 'productByMember' && <ProductPerMember dateRange={dateRangeMember} setDateRange={setDateRangeMember} />}
+
       </Tabs>
       {/* <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
         <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto"> 

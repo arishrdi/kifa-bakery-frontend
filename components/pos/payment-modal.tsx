@@ -21,6 +21,8 @@ import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 import Image from "next/image"
 import { PrintInvoice } from "./print-invoice"
 import { useQueryClient } from "@tanstack/react-query"
+import { MemberComboBox } from "@/app/pos/member-combobox"
+import { Member } from "@/types/member"
 
 interface PaymentModalProps {
   open: boolean
@@ -38,17 +40,13 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
   const [cardNumber, setCardNumber] = useState<string>("")
   const [processing, setProcessing] = useState<boolean>(false)
   const [completed, setCompleted] = useState<boolean>(false)
-
-  const queryClient = useQueryClient();
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
 
   const { user } = useAuth();
   const { mutate: createOrderMutation, isPending: isCreatingOrder, isSuccess: isSuccessOrder } = createOrder();
-  // console.log(total)
   const { invalidate } = useInvalidateQueries()
 
   const handlePayment = () => {
-    // setProcessing(true)
-    // console.log({total, cart})
 
     if (!user) {
       return
@@ -60,6 +58,7 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
       payment_method: paymentMethod === "tunai" ? "cash" : "qris",
       total_paid: Number(amountPaid),
       tax: tax,
+      member_id: selectedMember?.id,
       items: cart.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -70,6 +69,7 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
         invalidate(['products-outlet', `${user.outlet_id}`])
         invalidate(['orders-history', `${user.outlet_id}`])
         invalidate(['cash-register', `${user.outlet_id}`])
+        invalidate(['revenue', `${user.outlet_id}`])
 
 
         // invalidate(['cash-register', `${user.outlet_id}`])
@@ -156,7 +156,7 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
                 </div>
               </RadioGroup>
               {paymentMethod === "tunai" && (
-                <div className="space-y-2">
+                <div className="space-y-2 mb-3">
                   <div className="grid gap-1">
                     <Label htmlFor="amount" className="text-xs">
                       Jumlah Uang Diterima
@@ -182,7 +182,7 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
                       </div>
                       <Separator className="my-1" />
                       <div className="flex justify-between font-medium text-xs">
-                        <span>{change < 0 ? "Kekurangan" :"Kembalian"}</span>
+                        <span>{change < 0 ? "Kekurangan" : "Kembalian"}</span>
                         <span className={change < 0 ? "text-red-500" : "text-green-600"}>
                           Rp {change.toLocaleString()}
                         </span>
@@ -192,7 +192,7 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
                 </div>
               )}
               {paymentMethod === "qris" && (
-                <div className="space-y-2">
+                <div className="space-y-2 mb-3">
                   <div className="flex justify-center p-3 bg-muted rounded-md">
                     <div className="w-48 h-48 bg-white p-1 rounded-md flex items-center justify-center">
                       <Image
@@ -209,6 +209,12 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
                   </div>
                 </div>
               )}
+              <div className="space-y-2">
+                <div className="grid gap-1">
+                  <Label className="text-xs font-medium">Member</Label>
+                  <MemberComboBox onMemberSelect={setSelectedMember} />
+                </div>
+              </div>
               <div className="h-2"></div>
             </ScrollArea>
 

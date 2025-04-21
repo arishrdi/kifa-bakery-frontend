@@ -16,8 +16,9 @@ import { cancelOrder, getHistoryOrders } from "@/services/order-service"
 import { useAuth } from "@/contexts/auth-context"
 import { OrderItem } from "@/types/order-history"
 import { Outlet } from "@/types/outlet"
-import { toast } from "@/hooks/use-toast"
 import { printOrders } from "./print-orders"
+import TransactionDetailDialog from "../transaction-detail-dialog"
+import { DateRangePicker } from "../ui/date-range-picker"
 
 interface TransactionHistoryModalProps {
   open: boolean
@@ -27,15 +28,24 @@ interface TransactionHistoryModalProps {
 
 export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: TransactionHistoryModalProps) {
   const [date, setDate] = useState<Date>(new Date())
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
+    to: new Date() // Hari ini
+  });
+
+  const handleDateRangeChange = (newRange: { from?: Date; to?: Date }) => {
+    setDateRange({
+      from: newRange?.from ?? dateRange.from, // Pertahankan nilai sebelumnya jika undefined
+      to: newRange?.to ?? dateRange.to
+    });
+  };
+
   const [searchQuery, setSearchQuery] = useState("")
-  // const [selectedTransaction, setSelectedTransaction] = useState<OrderItem | null>(null)
-  // const [refundPopover, setRefundPopover] = useState(false)
-  const [selectedInvoice, setSelectedInvoice] = useState("")
 
   const { user } = useAuth()
-  const orderHistory = getHistoryOrders(user?.outlet_id, format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
+  const orderHistory = getHistoryOrders(user?.outlet_id, format(dateRange?.from ?? new Date(), 'yyyy-MM-dd'), format(dateRange?.to ?? new Date, 'yyyy-MM-dd'))
 
-  const { data: transactionData, refetch: refetchOrder } = orderHistory()
+  const { data: transactionData } = orderHistory()
 
   const filteredTransactions = transactionData?.data.orders.filter((transaction) => {
     const searchLower = searchQuery.toLowerCase();
@@ -44,19 +54,6 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
       transaction.user.toLowerCase().includes(searchLower)
     );
   }) || [];
-
-  const cancelOrderMutate = cancelOrder()
-
-  const handleCancelOrder = (id: number) => {
-    cancelOrderMutate.mutate(id, {
-      onSuccess: () => {
-        refetchOrder()
-        // setRefundPopover(false)
-        refetchBalance()
-        toast({ description: "Berhasil melakukan refund" })
-      }
-    })
-  }
 
   // Function to handle printing the receipt
   const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
@@ -75,13 +72,32 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
               padding: 20px;
               max-width: 300px;
             }
-            .header {
-              text-align: center;
+           .header {
+              display: flex;
+              align-items: center;
+              gap: 15px;
               margin-bottom: 20px;
             }
+            
+            .header-text {
+              flex: 1;
+              text-align: right;
+            }
+            
+            .logo-container {
+              display: flex;
+              align-items: center;
+            }
+            
+            .logo {
+              max-width: 50px;
+              height: auto;
+            }
+            
             .title {
               font-size: 16px;
               font-weight: bold;
+              margin-bottom: 4px;
             }
             .info {
               font-size: 12px;
@@ -116,12 +132,19 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
         </head>
         <body>
           <div class="header">
-              <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" alt="Logo Outlet" class="logo"" />
-              <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
-              <div class="info">${outlet.name}</div>
-              <div class="info">Rajanya Roti Hajatan</div>
-              <div class="info">Alamat: ${outlet.address}</div>
-              <div class="info">Telp: ${outlet.phone}</div>
+    <div class="logo-container">
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+           alt="Logo Outlet" 
+           class="logo"/>
+    </div>
+    <div class="header-text">
+      <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
+      <div class="info">Rajanya Roti Hajatan</div>
+      <div class="info">${outlet.name}</div>
+      <div class="info">Alamat: ${outlet.address}</div>
+      <div class="info">Telp: ${outlet.phone}</div>
+    </div>
+  </div>
 
               <div class="divider"></div>
             <div class="info">No. Invoice: ${transaction.order_number}</div>
@@ -205,7 +228,11 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div className="flex flex-1 gap-2 items-center">
-            <Popover>
+            <DateRangePicker
+              value={dateRange}
+              onChange={handleDateRangeChange}
+            />
+            {/* <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -226,7 +253,7 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
                   initialFocus
                 />
               </PopoverContent>
-            </Popover>
+            </Popover> */}
             {user?.id && transactionData?.data.total_orders ? <Button onClick={() => printOrders({ outlet: user?.outlet, transactions: transactionData?.data })}><Printer /> Cetak</Button> : null}
           </div>
           <div className="relative w-full sm:w-auto">
@@ -244,7 +271,8 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
         <div className="rounded-md bg-orange-50 p-3 mb-4">
           <div className="flex justify-between items-center">
             <div>
-              <p className="font-medium">Total Transaksi {format(date, "d MMMM yyyy", { locale: id })}</p>
+              <p className="font-medium">Total Transaksi {format(dateRange.from, "d MMMM yyyy", { locale: id })} - {format(dateRange.to, "d MMMM yyyy ", { locale: id })}</p>
+              {/* <p className="font-medium">Total Transaksi {format(date, "d MMMM yyyy", { locale: id })}</p> */}
               <p className="text-sm text-muted-foreground">{transactionData?.data.total_orders} transaksi</p>
             </div>
             <div className="text-xl font-bold text-orange-600">Rp {Number(transactionData?.data.total_revenue).toLocaleString()}</div>
@@ -255,6 +283,7 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="text-sm font-semibold text-gray-700">No</TableHead>
                 <TableHead className="text-sm font-semibold text-gray-700">Invoice</TableHead>
                 <TableHead className="text-sm font-semibold text-gray-700">Waktu</TableHead>
                 <TableHead className="text-sm font-semibold text-gray-700">Kasir</TableHead>
@@ -273,8 +302,9 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTransactions.map((transaction) => (
+                filteredTransactions.map((transaction, i) => (
                   <TableRow key={transaction.id} className="hover:bg-gray-50 transition-colors">
+                    <TableCell className="text-sm text-gray-800 font-medium">{i + 1}</TableCell>
                     <TableCell className="text-sm text-gray-800 font-medium">{transaction.order_number}</TableCell>
                     <TableCell className="text-sm text-gray-600">{transaction.created_at}</TableCell>
                     <TableCell className="text-sm text-gray-600">{transaction.user}</TableCell>
@@ -301,6 +331,7 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <TransactionDetailDialog trx={transaction} />
                         <Button
                           variant="ghost"
                           size="sm"

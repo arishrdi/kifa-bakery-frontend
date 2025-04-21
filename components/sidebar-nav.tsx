@@ -82,11 +82,11 @@ const navItems = [
     icon: Package,
     subItems: [
       // { name: "Atur Stok", href: "/dashboard/stock?tab=adjustment", icon: Package },
+      // { name: "Stok Realtime", href: "/dashboard/stock?tab=realtime", icon: Package },
       { name: "Penyesuaian Stok", href: "/dashboard/stock?tab=adjustment", icon: Package },
-      { name: "Stok Realtime", href: "/dashboard/stock?tab=realtime", icon: Package },
       { name: "Riwayat Stok", href: "/dashboard/stock?tab=history", icon: History },
       { name: "Stok Per Tanggal", href: "/dashboard/stock?tab=custom", icon: Calendar },
-      { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: Truck },
+      { name: "Transfer Stok", href: "/dashboard/stock?tab=transfer", icon: Truck },
       { name: "Approve Stok", href: "/dashboard/stock?tab=approve", icon: ArrowLeftRight },
     ],
   },
@@ -131,7 +131,10 @@ const navItems = [
       { name: "Perhari", href: "/dashboard/reports?tab=dailySales", icon: LineChart },
       { name: "Per Item", href: "/dashboard/reports?tab=monthly", icon: FileBarChart },
       { name: "Per Kategori", href: "/dashboard/reports?tab=kategori", icon: BarChart },
+      { name: "Per Member", href: "/dashboard/reports?tab=productByMember", icon: UserRound },
       { name: "Stok", href: "/dashboard/reports?tab=stock", icon: Package },
+      { name: "Stok Realtime", href: "/dashboard/reports?tab=realtime", icon: Package },
+      { name: "Approve", href: "/dashboard/reports?tab=approve", icon: ArrowLeftRight },
     ],
   },
 ]
@@ -159,16 +162,16 @@ export function SidebarNav() {
   const isSubItemActive = (href: string) => {
     const [path, query] = href.split("?")
     const basePathname = pathname.split("?")[0]
-    
+
     if (basePathname !== path) return false
-    
+
     const currentTab = searchParams?.get("tab")
     const hrefTab = new URLSearchParams(query).get("tab")
-  
+
     if (path === "/dashboard" && !currentTab) {
       return hrefTab === "overview"
     }
-  
+
     return currentTab === hrefTab
   }
 
@@ -189,13 +192,13 @@ export function SidebarNav() {
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               {item.subItems.length > 0 ? (
-               <Collapsible
-               open={
-                 openSections[item.name] ||
-                 item.subItems.some((subItem) => isSubItemActive(subItem.href)) // Perubahan disini
-               }
-               className="w-full"
-             >
+                <Collapsible
+                  open={
+                    openSections[item.name] ||
+                    item.subItems.some((subItem) => isSubItemActive(subItem.href)) // Perubahan disini
+                  }
+                  className="w-full"
+                >
                   <CollapsibleTrigger asChild onClick={() => toggleSection(item.name)}>
                     <SidebarMenuButton className="justify-between" isActive={isActive(item.href)} tooltip={item.name}>
                       <div className="flex items-center">

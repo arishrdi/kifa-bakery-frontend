@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CreditCard, Clock, Search, ShoppingCart, Trash2, User, History, LogOut, Menu, PackagePlus } from "lucide-react"
+import { CreditCard, Clock, Search, ShoppingCart, Trash2, User, History, LogOut, Menu, PackagePlus, CalendarDays, Info } from "lucide-react"
 import { PaymentModal } from "@/components/pos/payment-modal"
 import { TransactionHistoryModal } from "@/components/pos/transaction-history-modal"
 import { ProductGrid } from "@/components/pos/product-grid"
@@ -21,6 +21,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getCashBalanceByOutlet } from "@/services/cash-transaction-service"
 import { Product } from "@/types/product"
 import AdjustStock from "@/components/pos/adjust-stock"
+import { getOneMonthRevenue } from "@/services/order-service"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import MonthlyRevenue from "@/components/pos/monthly-revenue"
 
 export default function POSPage() {
   const [cart, setCart] = useState<Array<{ id: number; name: string; price: number; quantity: number }>>([])
@@ -34,6 +37,7 @@ export default function POSPage() {
 
   const outletId = Number(user?.outlet_id) || 1
 
+  const { data: oneMonthRevenue } = getOneMonthRevenue(outletId)
   const queryCashBalance = getCashBalanceByOutlet(outletId)
   const { data: cashBalance, refetch: refetchBalance } = queryCashBalance()
 
@@ -141,11 +145,9 @@ export default function POSPage() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <AdjustStock products={localProducts} />
+            {oneMonthRevenue?.data && <MonthlyRevenue revenue={oneMonthRevenue?.data} />}
             <CashRegister outletId={outletId} cashBalance={Number(cashBalance?.data.balance) || 0} />
-            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-              <Clock className="mr-2 h-4 w-4" />
-              <span className="hidden lg:inline">Shift:</span> {user?.last_shift?.start_time} - {user?.last_shift?.end_time}
-            </Badge>
+
             <div className="flex items-center">
               <User className="h-5 w-5 text-orange-500 mr-2" />
               <span className="font-medium">{user?.name} ({user?.role})</span>
@@ -179,10 +181,6 @@ export default function POSPage() {
                       <User className="h-4 w-4 text-orange-500 mr-2" />
                       <span className="font-medium">{user?.name} ({user?.role})</span>
                     </div>
-                    <Badge className="bg-orange-100 text-orange-800 w-full justify-start mt-1">
-                      <Clock className="mr-2 h-3 w-3" />
-                      Shift: ({user?.last_shift?.start_time} - {user?.last_shift?.end_time})
-                    </Badge>
                   </div>
 
                   <div className="p-2">

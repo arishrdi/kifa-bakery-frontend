@@ -9,9 +9,10 @@ export interface Member {
     gender?: "male" | "female"
     created_at: Date;
     updated_at: Date;
+    orders_count: number
 }
 
-export interface MemberInput extends Omit<Member, "id" | "created_at" | "updated_at"> { }
+export interface MemberInput extends Omit<Member, "id" | "created_at" | "updated_at" | "orders_count"> { }
 
 export interface AllMemberResponse extends StatusMessage {
   data: Member[];
