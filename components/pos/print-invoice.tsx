@@ -1,108 +1,164 @@
-import { OrderItem } from "@/types/order-history";
+import { OrderItem } from "@/types/order-history"
+import { Outlet } from "@/types/outlet"
 
-interface PrintInvoice {
-  cashierName: string;
-  order: OrderItem;
-}
+export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
+    const printWindow = window.open('', '_blank', 'width=400,height=600')
 
-export const PrintInvoice = ({ order, cashierName }: PrintInvoice) => {
-  const invoiceContent = `
-    <div style="font-family: 'Arial', sans-serif; padding: 10px; max-width: 80mm; margin: auto; background: #fff;">
-      <div style="text-align: center; margin-bottom: 10px;">
-        <h1 style="font-size: 18px; font-weight: bold; color: #e67e22;">Kifa Bakery</h1>
-        <p style="font-size: 12px; color: #555;">Rajanya Roti Hajatan</p>
-        <p style="font-size: 10px; color: #777;">Jl. Raya Bakery No. 123, Jakarta</p>
-      </div>
-
-      <hr style="border: 1px dashed #ccc; margin: 5px 0;">
-
-      <h2 style="text-align: center; font-size: 16px; font-weight: bold; color: #333;">INVOICE</h2>
-      <p style="font-size: 10px; color: #555;">Tanggal: ${new Date(order.created_at).toLocaleString()}</p>
-
-      <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 5px;">
-        <thead>
-          <tr style="border-bottom: 1px solid #ddd;">
-            <th align="left">Produk</th>
-            <th align="center">Qty</th>
-            <th align="right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${order.items
-            .map(
-              (item) => `
-            <tr>
-              <td>${item.product}</td>
-              <td align="center">${item.quantity}</td>
-              <td align="right">Rp ${parseInt(item.total).toLocaleString()}</td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
-
-      <hr style="border: 1px dashed #ccc; margin: 8px 0;">
-
-      <div style="font-size: 10px; text-align: right;">
-        <p>Subtotal: Rp ${parseInt(order.subtotal).toLocaleString()}</p>
-        <p>PPN: Rp ${parseInt(order.tax).toLocaleString()}</p>
-        <p>Diskon: Rp ${parseInt(order.discount).toLocaleString()}</p>
-        <p style="font-weight: bold;">Total: Rp ${parseInt(order.total).toLocaleString()}</p>
-
-        ${
-          order.payment_method === "cash"
-            ? `
-          <p>Uang Diterima: Rp ${parseInt(order.total_paid).toLocaleString()}</p>
-          <p>Kembalian: Rp ${parseInt(order.change).toLocaleString()}</p>
-        `
-            : ""
-        }
-      </div>
-
-      <hr style="border: 1px dashed #ccc; margin: 8px 0;">
-
-      <div style="font-size: 10px;">
-        <p>Outlet: ${order.outlet}</p>
-        <p>Kasir: ${cashierName}</p>
-        <p>Nomor Faktur: ${order.order_number}</p>
-        <p>Metode Pembayaran: ${order.payment_method}</p>
-      </div>
-
-      <p style="text-align: center; font-size: 10px; color: #777; margin-top: 10px;">
-        Terima kasih atas pembelian Anda!
-      </p>
-    </div>
-  `;
-
-  const printWindow = window.open("", "_blank");
-
-  if (printWindow) {
-    printWindow.document.write(`
-      <html>
+    if (printWindow) {
+      const receiptContent = `
+        <!DOCTYPE html>
+        <html>
         <head>
-          <title>Invoice Sweet Bakery</title>
+          <title>Struk Transaksi #${transaction.order_number}</title>
           <style>
-            @media print {
-              @page {
-                size: 80mm auto;
-                margin: 0;
-              }
-              body {
-                font-family: 'Arial', sans-serif;
-                font-size: 10px;
-                width: 80mm;
-                padding: 10px;
-              }
+            body {
+              font-family: 'Courier New', monospace;
+              margin: 0;
+              padding: 20px;
+              max-width: 300px;
+            }
+           .header {
+              display: flex;
+              align-items: center;
+              gap: 15px;
+              margin-bottom: 20px;
+            }
+            
+            .header-text {
+              flex: 1;
+              text-align: right;
+            }
+            
+            .logo-container {
+              display: flex;
+              align-items: center;
+            }
+            
+            .logo {
+              max-width: 50px;
+              height: auto;
+            }
+            
+            .title {
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .info {
+              font-size: 12px;
+              margin: 5px 0;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 10px 0;
+            }
+            .item {
+              display: flex;
+              justify-content: space-between;
+              font-size: 12px;
+              margin: 5px 0;
+            }
+            .total {
+              font-weight: bold;
+              margin-top: 10px;
+              text-align: right;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+            }
+            .logo {
+              max-width: 40px; 
+              height: auto; 
+              margin-bottom: 10px;
             }
           </style>
         </head>
         <body>
-          ${invoiceContent}
+          <div class="header">
+            <div class="logo-container">
+              <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+                  alt="Logo Outlet" 
+                  class="logo"/>
+            </div>
+            <div class="header-text">
+              <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
+              <div class="info">Rajanya Roti Hajatan</div>
+              <div class="info">${outlet.name}</div>
+              <div class="info">Alamat: ${outlet.address}</div>
+              <div class="info">Telp: ${outlet.phone}</div>
+            </div>
+          </div>
+
+            <div class="divider"></div>
+            <div class="info">No. Invoice: ${transaction.order_number}</div>
+            <div class="info">Tanggal: ${transaction.created_at}</div>
+            <div class="info">Kasir: ${transaction.user.name}</div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            ${transaction.items.map(item => `
+              <div class="item">
+                <div>${item.quantity}x ${item.product}</div>
+                <div>Rp ${Number(item.price * item.quantity).toLocaleString()}</div>
+              </div>
+              `).join('')}
+              ${parseInt(transaction.tax) > 0
+          ? `
+                <div class="item">
+                <div>PPN:</div>
+                <div>Rp ${Number(transaction.tax).toLocaleString()}</div>
+                </div>
+                `
+          : ''
+        }
+              <div class="divider"></div>
+              <div class="item">
+                <div>Subtotal: </div>
+                <div>Rp ${Number(transaction.subtotal).toLocaleString()}</div>
+              </div>
+          </div>
+          <div class="divider"></div>
+          <div class="total">Total: Rp ${Number(transaction.total).toLocaleString()}</div>
+           ${transaction.payment_method === 'cash'
+          ? `
+          <div class="item">
+            <div>Metode Pembayaran:</div>
+            <div>${transaction.payment_method === "cash" ? "TUNAI" : "QRIS"}</div>
+          </div>
+          <div class="item">
+            <div>Bayar:</div>
+            <div>Rp ${Number(transaction.total_paid).toLocaleString()}</div>
+          </div>
+          <div class="item">
+            <div>Kembalian:</div>
+            <div>Rp ${Number(transaction.change).toLocaleString()}</div>
+          </div>
+        `
+          : ''
+        }
+          <div class="divider"></div>
+          <div class="footer">
+            Terima kasih atas kunjungan Anda!
+          </div>
         </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+        </html>
+      `
+
+      // Write content to the new window
+      printWindow.document.open()
+      printWindow.document.write(receiptContent)
+      printWindow.document.close()
+
+      // Trigger print when content is loaded
+      printWindow.onload = function () {
+        printWindow.print()
+        // Close the window after printing (optional - some browsers might close automatically)
+        // printWindow.close()
+      }
+    } else {
+      console.error('Failed to open print window')
+      alert('Tidak dapat membuka jendela cetak. Periksa pengaturan popup browser Anda.')
+    }
   }
-};

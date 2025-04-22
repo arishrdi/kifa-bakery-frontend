@@ -53,8 +53,6 @@ export default function POSPage() {
 
   const { data: categories } = getAllCategories()
 
-  console.log({ cashBalance, outletId })
-
   const addToCart = (product: {
     id: number;
     name: string;
@@ -206,7 +204,7 @@ export default function POSPage() {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col md:flex-row overflow-hidden">
-        <div className="w-full md:w-2/3 p-4 flex flex-col h-[calc(100vh-64px)]">
+        <div className="w-full md:w-3/5 p-4 flex flex-col h-[calc(100vh-64px)]">
           <div className="flex flex-col mb-4 gap-3">
             <div className="relative w-full">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -261,7 +259,7 @@ export default function POSPage() {
         </div>
 
         {/* Cart (Right side) */}
-        <div className="w-full md:w-1/3 border-t md:border-t-0 md:border-l border-orange-200 flex flex-col h-[calc(100vh-64px)]">
+        <div className="w-full md:w-2/5 border-t md:border-t-0 md:border-l border-orange-200 flex flex-col h-[calc(100vh-64px)]">
           <Card className="h-full flex flex-col rounded-none border-x-0 border-b-0">
             <CardHeader className="border-b border-orange-200">
               <CardTitle className="flex items-center">
@@ -297,20 +295,31 @@ export default function POSPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-6 w-6 border-orange-200"
+                              className="h-8 w-8 border-orange-200 hover:bg-orange-50"
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             >
                               -
                             </Button>
-                            <span className="w-8 text-center">{item.quantity}</span>
+
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newQuantity = Math.max(1, parseInt(e.target.value) || 1)
+                                updateQuantity(item.id, newQuantity)
+                              }}
+                              className="h-8 w-20 text-center font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-orange-200 hover:border-orange-300 focus-visible:ring-orange-500"
+                            />
+
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-6 w-6 border-orange-200"
+                              className="h-8 w-8 border-orange-200 hover:bg-orange-50"
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             >
                               +

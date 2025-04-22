@@ -3,6 +3,7 @@ import { StatusMessage } from "./response"
 export interface Member {
     id: number,
     name: string
+    member_code: string
     email?: string
     phone?: string
     address?: string

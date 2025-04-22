@@ -203,6 +203,20 @@ export default function MemberPage() {
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="member_code" className="text-right">
+                      Kode
+                    </Label>
+                    <Input
+                      id="member_code"
+                      name="member_code"
+                      placeholder="Kode member"
+                      className="col-span-3"
+                      value={formData.member_code || ""}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="phone" className="text-right">
                       Telp
                     </Label>
@@ -342,8 +356,8 @@ export default function MemberPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nama</TableHead>
+                <TableHead>Kode Member</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>No. Hp</TableHead>
                 <TableHead>Alamat</TableHead>
                 <TableHead>Jenis Kelamin</TableHead>
                 <TableHead>Total transaksi</TableHead>
@@ -353,10 +367,17 @@ export default function MemberPage() {
             <TableBody>
               {members?.data.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.name}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{member.phone}</TableCell>
-                  <TableCell>{member.address}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>
+                      <div className="font-medium">{member.name}</div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {member.phone}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{member.member_code}</TableCell>
+                  <TableCell>{member.email ?? '-'}</TableCell>
+                  <TableCell>{member.address ?? '-'}</TableCell>
                   <TableCell>{member.gender === 'male' ? "Laki-laki" : "Perempuan"}</TableCell>
                   <TableCell>{member.orders_count}</TableCell>
                   <TableCell className="text-right">

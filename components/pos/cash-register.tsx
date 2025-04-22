@@ -28,8 +28,6 @@ export function CashRegister({ outletId, cashBalance }: { outletId: number, cash
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
 
-
-
   // if (!user) {
   //   return null
   // }

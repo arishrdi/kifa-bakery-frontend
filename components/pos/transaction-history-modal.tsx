@@ -132,21 +132,21 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
         </head>
         <body>
           <div class="header">
-    <div class="logo-container">
-      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
-           alt="Logo Outlet" 
-           class="logo"/>
-    </div>
-    <div class="header-text">
-      <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
-      <div class="info">Rajanya Roti Hajatan</div>
-      <div class="info">${outlet.name}</div>
-      <div class="info">Alamat: ${outlet.address}</div>
-      <div class="info">Telp: ${outlet.phone}</div>
-    </div>
-  </div>
+            <div class="logo-container">
+              <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+                  alt="Logo Outlet" 
+                  class="logo"/>
+            </div>
+            <div class="header-text">
+              <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
+              <div class="info">Rajanya Roti Hajatan</div>
+              <div class="info">${outlet.name}</div>
+              <div class="info">Alamat: ${outlet.address}</div>
+              <div class="info">Telp: ${outlet.phone}</div>
+            </div>
+          </div>
 
-              <div class="divider"></div>
+            <div class="divider"></div>
             <div class="info">No. Invoice: ${transaction.order_number}</div>
             <div class="info">Tanggal: ${transaction.created_at}</div>
             <div class="info">Kasir: ${transaction.user}</div>

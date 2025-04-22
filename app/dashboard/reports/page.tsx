@@ -3355,7 +3355,7 @@ export default function ReportsPage() {
                           <TableHead className="text-right">Stock Masuk</TableHead>
                           <TableHead className="text-right">Stock Keluar</TableHead>
                           <TableHead className="text-right">Stock Akhir</TableHead>
-                          <TableHead className="text-right">Stock Aktual</TableHead>
+                          {/* <TableHead className="text-right">Stock Aktual</TableHead> */}
                           {/* <TableHead className="text-right">Selisih</TableHead> */}
                         </TableRow>
                       </TableHeader>
@@ -3371,7 +3371,7 @@ export default function ReportsPage() {
                             <TableCell className="text-right">{product.stock_masuk}</TableCell>
                             <TableCell className="text-right">{product.stock_keluar}</TableCell>
                             <TableCell className="text-right">{product.stock_akhir}</TableCell>
-                            <TableCell className="text-right">{product.stock_aktual}</TableCell>
+                            {/* <TableCell className="text-right">{product.stock_aktual}</TableCell> */}
                             {/* <TableCell className={`text-right ${
                               product.selisih !== 0 ? 'text-red-500 font-bold' : ''
                             }`}>

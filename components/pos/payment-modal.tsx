@@ -19,10 +19,12 @@ import { createOrder } from "@/services/order-service"
 import { useAuth } from "@/contexts/auth-context"
 import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 import Image from "next/image"
-import { PrintInvoice } from "./print-invoice"
+import { handlePrintReceipt, PrintInvoice } from "./print-invoice"
 import { useQueryClient } from "@tanstack/react-query"
 import { MemberComboBox } from "@/app/pos/member-combobox"
 import { Member } from "@/types/member"
+import { OrderResponse } from "@/types/order"
+import { useOutlet } from "@/contexts/outlet-context"
 
 interface PaymentModalProps {
   open: boolean
@@ -37,10 +39,10 @@ interface PaymentModalProps {
 export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, onSuccess, tax }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>("tunai")
   const [amountPaid, setAmountPaid] = useState<string>("")
-  const [cardNumber, setCardNumber] = useState<string>("")
   const [processing, setProcessing] = useState<boolean>(false)
   const [completed, setCompleted] = useState<boolean>(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<OrderResponse["data"] | null>(null)
 
   const { user } = useAuth();
   const { mutate: createOrderMutation, isPending: isCreatingOrder, isSuccess: isSuccessOrder } = createOrder();
@@ -76,16 +78,24 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
 
 
         refetchBalance()
+        setPaymentMethod("tunai")
+        setAmountPaid("")
+
+        console.log({ newOrder: data.data })
+
+        if (data) {
+          setSelectedOrder(data.data)
+        }
 
         setCompleted(true)
-        setTimeout(() => {
-          onSuccess()
-          setCompleted(false)
-          setPaymentMethod("tunai")
-          setAmountPaid("")
-          setCardNumber("")
-          onOpenChange(false)
-        }, 1500)
+        // setTimeout(() => {
+        //   onSuccess()
+        //   setCompleted(false)
+        //   setPaymentMethod("tunai")
+        //   setAmountPaid("")
+        //   setCardNumber("")
+        //   onOpenChange(false)
+        // }, 1500)
       }
     })
 
@@ -117,6 +127,15 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
             </div>
             <h3 className="text-sm font-medium text-green-700">Pembayaran Berhasil!</h3>
             <p className="mt-1 text-xs text-muted-foreground">Transaksi telah berhasil diselesaikan</p>
+            <div className="flex justify-center gap-5 mt-3">
+              <Button variant="ghost" onClick={() => handlePrintReceipt(selectedOrder, user?.outlet)}>Cetak Struk</Button>
+              <Button variant="destructive" onClick={() => {
+                setCompleted(false)
+                onOpenChange(false)
+                setPaymentMethod("tunai")
+                setAmountPaid("")
+              }}>Batal</Button>
+            </div>
           </div>
         ) : (
           <>
