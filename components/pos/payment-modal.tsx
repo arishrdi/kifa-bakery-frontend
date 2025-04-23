@@ -4,7 +4,7 @@ import { DialogFooter } from "@/components/ui/dialog"
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -37,22 +37,33 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, onSuccess, tax }: PaymentModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState<string>("tunai")
-  const [amountPaid, setAmountPaid] = useState<string>("")
-  const [processing, setProcessing] = useState<boolean>(false)
-  const [completed, setCompleted] = useState<boolean>(false)
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<OrderResponse["data"] | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<string>("tunai");
+  const [amountPaid, setAmountPaid] = useState<string>("");
+  const [processing, setProcessing] = useState<boolean>(false);
+  const [completed, setCompleted] = useState<boolean>(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderResponse["data"] | null>(null);
 
   const { user } = useAuth();
-  const { mutate: createOrderMutation, isPending: isCreatingOrder, isSuccess: isSuccessOrder } = createOrder();
-  const { invalidate } = useInvalidateQueries()
+  const { mutate: createOrderMutation, isPending: isCreatingOrder } = createOrder();
+  const { invalidate } = useInvalidateQueries();
+
+  // Reset all states when modal closes
+  useEffect(() => {
+    if (!open) {
+      setPaymentMethod("tunai");
+      setAmountPaid("");
+      setProcessing(false);
+      setCompleted(false);
+      setSelectedMember(null);
+      setSelectedOrder(null);
+    }
+  }, [open]);
 
   const handlePayment = () => {
+    if (!user) return;
 
-    if (!user) {
-      return
-    }
+    setProcessing(true);
 
     createOrderMutation({
       outlet_id: user.outlet_id,
@@ -68,47 +79,39 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
       })),
     }, {
       onSuccess: (data) => {
-        invalidate(['products-outlet', `${user.outlet_id}`])
-        invalidate(['orders-history', `${user.outlet_id}`])
-        invalidate(['cash-register', `${user.outlet_id}`])
-        invalidate(['revenue', `${user.outlet_id}`])
+        invalidate(['products-outlet', `${user.outlet_id}`]);
+        invalidate(['orders-history', `${user.outlet_id}`]);
+        invalidate(['cash-register', `${user.outlet_id}`]);
+        invalidate(['revenue', `${user.outlet_id}`]);
 
-
-        // invalidate(['cash-register', `${user.outlet_id}`])
-
-
-        refetchBalance()
-        setPaymentMethod("tunai")
-        setAmountPaid("")
-
-        console.log({ newOrder: data.data })
+        refetchBalance();
 
         if (data) {
-          setSelectedOrder(data.data)
+          setSelectedOrder(data.data);
         }
 
-        setCompleted(true)
-        // setTimeout(() => {
-        //   onSuccess()
-        //   setCompleted(false)
-        //   setPaymentMethod("tunai")
-        //   setAmountPaid("")
-        //   setCardNumber("")
-        //   onOpenChange(false)
-        // }, 1500)
+        setCompleted(true);
+        onSuccess();
+        setProcessing(false);
+      },
+      onError: () => {
+        setProcessing(false);
       }
-    })
-
-  }
+    });
+  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, "")
-    setAmountPaid(value)
-  }
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setAmountPaid(value);
+  };
 
-  const amountPaidValue = amountPaid ? Number.parseInt(amountPaid) : 0
-  const change = amountPaidValue - total
-  const sufficientAmount = amountPaidValue >= total
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
+  const amountPaidValue = amountPaid ? Number.parseInt(amountPaid) : 0;
+  const change = amountPaidValue - total;
+  const sufficientAmount = amountPaidValue >= total;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,13 +131,12 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
             <h3 className="text-sm font-medium text-green-700">Pembayaran Berhasil!</h3>
             <p className="mt-1 text-xs text-muted-foreground">Transaksi telah berhasil diselesaikan</p>
             <div className="flex justify-center gap-5 mt-3">
-              <Button variant="ghost" onClick={() => handlePrintReceipt(selectedOrder, user?.outlet)}>Cetak Struk</Button>
-              <Button variant="destructive" onClick={() => {
-                setCompleted(false)
-                onOpenChange(false)
-                setPaymentMethod("tunai")
-                setAmountPaid("")
-              }}>Batal</Button>
+              <Button variant="ghost" onClick={() => handlePrintReceipt(selectedOrder, user?.outlet)}>
+                Cetak Struk
+              </Button>
+              <Button variant="destructive" onClick={handleClose}>
+                Tutup
+              </Button>
             </div>
           </div>
         ) : (
@@ -240,7 +242,7 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
             <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 mt-3 px-3 py-3 border-t">
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 className="border-orange-200 text-xs"
                 disabled={processing}
               >
@@ -266,7 +268,5 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
         )}
       </DialogContent>
     </Dialog>
-
-  )
+  );
 }
-

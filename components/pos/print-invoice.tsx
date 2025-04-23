@@ -100,7 +100,7 @@ export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
           <div>
             ${transaction.items.map(item => `
               <div class="item">
-                <div>${item.quantity}x ${item.product}</div>
+                <div>${item.quantity}x ${item.product.name}</div>
                 <div>Rp ${Number(item.price * item.quantity).toLocaleString()}</div>
               </div>
               `).join('')}
