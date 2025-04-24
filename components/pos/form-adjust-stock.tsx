@@ -1,11 +1,11 @@
-import React, { ChangeEvent, FormEvent, SetStateAction, useState } from 'react'
+import React, { ChangeEvent, FormEvent, SetStateAction, useState, useMemo } from 'react'
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { Loader, Loader2, Plus } from 'lucide-react';
+import { Loader, Loader2, Plus, Search } from 'lucide-react';
 import { Product } from '@/types/product';
 import { InventoryInput } from '@/types/inventory';
 import { useAuth } from '@/contexts/auth-context';
@@ -19,8 +19,8 @@ type FormAdjustStockProps = {
 }
 
 export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, refetch }: FormAdjustStockProps) {
-
     const { user } = useAuth()
+    const [searchTerm, setSearchTerm] = useState('')
 
     const createInventory = createInventoryCashier()
 
@@ -32,6 +32,13 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
         notes: ""
     }
     const [inventoryFormData, setInventoryFormData] = useState<InventoryInput>(initialInventoryFormData)
+
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm) return products
+        return products.filter(product =>
+            product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    }, [products, searchTerm])
 
     const handleNumericInput = (name: any, value: string) => {
         const cleanedValue = value.replace(/[^-0-9]/g, '');
@@ -46,18 +53,16 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
 
         return parseInt(processedValue, 10).toString();
     };
+
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
 
         if (name === 'price' || name === 'quantity' || name === 'min_stock' || name === 'quantity_change') {
-
-
             setInventoryFormData(prev => ({
                 ...prev,
                 [name]: handleNumericInput(name, value)
             }));
         } else {
-
             setInventoryFormData(prev => ({
                 ...prev,
                 [name]: value
@@ -65,20 +70,48 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
         }
     }
 
+    // const handleAdjustStockSubmit = (e: FormEvent) => {
+    //     e.preventDefault()
+
+    //     createInventory.mutate(inventoryFormData, {
+    //         onSuccess: () => {
+    //             refetch()
+    //             toast({ title: "Berhasil mengatur stok!", description: "Perubahan membutuhkan persetujuan admin" })
+    //         },
+    //         onError: () => {
+    //             toast({ title: "Gagal mengatur stok!", description: "Tidak dapat mengatur stok, silahkan coba lagi", variant: "destructive" })
+    //         }
+    //     })
+    // }
+
     const handleAdjustStockSubmit = (e: FormEvent) => {
         e.preventDefault()
 
         createInventory.mutate(inventoryFormData, {
-            onSuccess: () => {
+            onSuccess: (response) => {
                 refetch()
-                toast({ title: "Berhasil mengatur stok!", description: "Perubahan membutuhkan persetujuan admin" })
+
+                // Cek tipe transaksi dan status
+                if (inventoryFormData.type === 'adjustment') {
+                    toast({
+                        title: "Berhasil mengajukan penyesuaian stok!",
+                        description: "Perubahan membutuhkan persetujuan admin"
+                    })
+                } else {
+                    toast({
+                        title: "Berhasil mengatur stok!",
+                        description: "Perubahan stok telah berhasil diterapkan"
+                    })
+                }
             },
             onError: () => {
-                toast({ title: "Gagal mengatur stok!", description: "Tidak dapat mengatur stok, silahkan coba lagi", variant: "destructive" })
+                toast({
+                    title: "Gagal mengatur stok!",
+                    description: "Tidak dapat mengatur stok, silahkan coba lagi",
+                    variant: "destructive"
+                })
             }
         })
-
-        // console.log({ inventoryFormData })
     }
 
     return (
@@ -97,9 +130,26 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
                                     <SelectValue placeholder="Pilih produk" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {products.map((product) => (
-                                        <SelectItem key={product.id} value={`${product.id}`}>{product.name}</SelectItem>
-                                    ))}
+                                    <div className="relative px-2 mb-2">
+                                        <Search className="absolute left-4 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Cari produk..."
+                                            className="pl-10 h-9"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                    {filteredProducts.length > 0 ? (
+                                        filteredProducts.map((product) => (
+                                            <SelectItem key={product.id} value={`${product.id}`}>
+                                                {product.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <div className="py-2 text-center text-sm text-muted-foreground">
+                                            Produk tidak ditemukan
+                                        </div>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -112,7 +162,6 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
                                 onChange={handleInputChange}
                                 placeholder="Masukkan nilai penambahan/pengurangan"
                                 onKeyPress={(e) => {
-                                    // Izinkan tanda minus hanya di awal atau untuk bilangan negatif
                                     if (e.key === '-' && e.currentTarget.value.includes('-')) {
                                         e.preventDefault();
                                     }
@@ -147,7 +196,6 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
                         </div>
                     </div>
                 </div>
-
             </div>
             <DialogFooter className="border-t pt-4">
                 <Button

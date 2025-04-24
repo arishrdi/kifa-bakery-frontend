@@ -38,6 +38,7 @@ import { createStaff, deleteStaff, getAllStaffByOutlet, updateStaff } from "@/se
 import { useOutlet } from "@/contexts/outlet-context";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function ShiftsPage() {
   const searchParams = useSearchParams();
@@ -74,7 +75,7 @@ export default function ShiftsPage() {
   const { mutate: createStaffMutate, isPending: isCreating } = createStaff();
   const delStaff = deleteStaff();
   const { mutate: updateStaffMutate, isPending: isUpdating } = updateStaff(selectedStaff?.id || 0);
-
+  const { user } = useAuth()
   const handleCreateStaff = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     createStaffMutate(formData, {
@@ -188,9 +189,12 @@ export default function ShiftsPage() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Tambah Staff
-              </Button>
+              {user?.role === "admin" && (
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Tambah Staff
+                </Button>
+              )}
+
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
@@ -260,6 +264,7 @@ export default function ShiftsPage() {
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="kasir">Kasir</SelectItem>
+                        <SelectItem value="supervisor">Supervisor</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -318,9 +323,9 @@ export default function ShiftsPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => {
                       setIsAddStaffDialogOpen(false);
                       setIsEditStaffDialogOpen(false);
@@ -328,8 +333,8 @@ export default function ShiftsPage() {
                   >
                     Batal
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isCreating || isUpdating}
                   >
                     {isCreating || isUpdating ? (
@@ -393,7 +398,9 @@ export default function ShiftsPage() {
                 <TableHead>Nama</TableHead>
                 <TableHead>Peran</TableHead>
                 <TableHead>Shift</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                {user?.role === "admin" && (
+                  <TableHead className="text-right">Aksi</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -414,29 +421,32 @@ export default function ShiftsPage() {
                       <span className="text-sm text-muted-foreground">Belum ada shift</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Buka menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleEditClick(staff)}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-red-600" 
-                          onClick={() => handleDeleteClick(staff)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {user?.role === "admin" && (
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Buka menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleEditClick(staff)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteClick(staff)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+
                 </TableRow>
               ))}
             </TableBody>
