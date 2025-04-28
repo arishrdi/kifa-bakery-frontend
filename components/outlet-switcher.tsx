@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useState } from "react"
+import { useAuth } from "@/contexts/auth-context"
 
 export function OutletSwitcher() {
   const { outlets, currentOutlet, setCurrentOutlet, isLoading } = useOutlet()
   const [open, setOpen] = useState(false)
+  const { user } = useAuth()
 
   if (isLoading) {
     return (
@@ -26,6 +28,15 @@ export function OutletSwitcher() {
       <Button variant="outline" className="w-full justify-start">
         <Store className="mr-2 h-4 w-4" />
         <span className="truncate">No outlets available</span>
+      </Button>
+    )
+  }
+
+  if (user?.role === 'supervisor') {
+    return (
+      <Button variant="outline" className="w-full justify-start">
+        <Store className="mr-2 h-4 w-4" />
+        <span className="truncate">{user.outlet.name}</span>
       </Button>
     )
   }

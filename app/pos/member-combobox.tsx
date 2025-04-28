@@ -108,9 +108,9 @@ export function MemberComboBox({ onMemberSelect }: MemberComboBoxProps) {
                   />
                   <div className="flex flex-col">
                     <span className="font-medium">{member.name}</span>
-                    {member.phone && (
+                    {member.member_code && (
                       <span className="text-xs text-gray-500">
-                        {member.phone}
+                        {member.member_code}
                       </span>
                     )}
                   </div>

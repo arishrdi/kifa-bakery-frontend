@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CreditCard, Clock, Search, ShoppingCart, Trash2, User, History, LogOut, Menu, PackagePlus, CalendarDays, Info } from "lucide-react"
+import { CreditCard, Clock, Search, ShoppingCart, Trash2, User, History, LogOut, Menu, PackagePlus, CalendarDays, Info, Percent } from "lucide-react"
 import { PaymentModal } from "@/components/pos/payment-modal"
 import { TransactionHistoryModal } from "@/components/pos/transaction-history-modal"
 import { ProductGrid } from "@/components/pos/product-grid"
@@ -24,14 +24,18 @@ import AdjustStock from "@/components/pos/adjust-stock"
 import { getOneMonthRevenue } from "@/services/order-service"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import MonthlyRevenue from "@/components/pos/monthly-revenue"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 export default function POSPage() {
-  const [cart, setCart] = useState<Array<{ id: number; name: string; price: number; quantity: number }>>([])
+  const [cart, setCart] = useState<Array<{ id: number; name: string; price: number; quantity: number; discount: number }>>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState("Semua")
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [localProducts, setLocalProducts] = useState<Product[]>([])
+  const [orderDiscount, setOrderDiscount] = useState(0)
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false)
 
   const { user, logout } = useAuth()
 
@@ -58,6 +62,7 @@ export default function POSPage() {
     name: string;
     price: number;
     quantity: number;
+    discount: number;
   }) => {
     // Cek stok tersedia
     const currentProduct = localProducts.find(p => p.id === product.id);
@@ -70,7 +75,7 @@ export default function POSPage() {
         item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
-      setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1 }]);
+      setCart([...cart, { id: product.id, name: product.name, price: product.price, quantity: 1, discount: 0 }]);
     }
 
     // Update stok lokal
@@ -109,9 +114,15 @@ export default function POSPage() {
     if (currentProduct && (currentProduct.quantity - quantityChange) < 0) return;
 
     // Update keranjang
-    setCart(cart.map((item) =>
-      item.id === id ? { ...item, quantity } : item
-    ));
+    setCart(cart.map((item) => {
+      if (item.id === id) {
+        const newQuantity = quantity
+        const newTotal = item.price * newQuantity
+        const newDiscount = Math.min(item.discount, newTotal)
+        return { ...item, quantity: newQuantity, discount: newDiscount }
+      }
+      return item
+    }))
 
     // Update stok lokal
     if (currentProduct) {
@@ -123,13 +134,59 @@ export default function POSPage() {
     }
   };
 
-  // Calculate subtotal
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  // const updateItemDiscount = (id: number, discount: number) => {
+  //   // Batasi diskon antara 0-100%
+  //   const clampedDiscount = Math.min(100, Math.max(0, discount));
 
-  // Calculate tax
+  //   setCart(cart.map((item) =>
+  //     item.id === id ? { ...item, discount: clampedDiscount } : item
+  //   ));
+  // };
+
+  const updateItemDiscount = (id: number, discount: number) => {
+    const item = cart.find(item => item.id === id);
+    if (!item) return;
+
+    // Hitung max discount yang diperbolehkan (harga total item)
+    const maxDiscount = item.price * item.quantity;
+
+    // Batasi diskon antara 0 sampai maxDiscount
+    const clampedDiscount = Math.min(maxDiscount, Math.max(0, discount));
+
+    setCart(cart.map((item) =>
+      item.id === id ? { ...item, discount: clampedDiscount } : item
+    ));
+  };
+
+
+  // Calculate subtotal (setelah diskon per item)
+  // const subtotal = cart.reduce((sum, item) => {
+  //   const itemTotal = item.price * item.quantity;
+  //   const itemDiscount = item.discount || 0;
+  //   return sum + (itemTotal - itemDiscount);
+  // }, 0);
+  cart.reduce((sum, item) => sum + item.discount, 0)
+
+  // // Calculate final total (setelah diskon order)
+  const subtotal = cart.reduce((sum, item) => {
+    const itemTotal = item.price * item.quantity
+    const itemDiscount = item.discount
+    return sum + (itemTotal - itemDiscount)
+  }, 0)
+
+
   const taxRate = (user?.outlet.tax ?? 0) / 100;
   const tax = subtotal ? subtotal * taxRate : 0;
-  const total = subtotal + tax;
+
+  const total = subtotal + tax - orderDiscount;
+
+
+  const resetDiscounts = () => {
+    // Reset diskon item
+    setCart(cart.map(item => ({ ...item, discount: 0 })));
+    // Reset diskon order
+    setOrderDiscount(0);
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -262,9 +319,83 @@ export default function POSPage() {
         <div className="w-full md:w-2/5 border-t md:border-t-0 md:border-l border-orange-200 flex flex-col h-[calc(100vh-64px)]">
           <Card className="h-full flex flex-col rounded-none border-x-0 border-b-0">
             <CardHeader className="border-b border-orange-200">
-              <CardTitle className="flex items-center">
-                <ShoppingCart className="mr-2 h-5 w-5 text-orange-500" />
-                Keranjang
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <ShoppingCart className="mr-2 h-5 w-5 text-orange-500" />
+                  Keranjang
+                </div>
+                {/* {cart.length > 0 && (
+                  <Dialog open={isDiscountDialogOpen} onOpenChange={setIsDiscountDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="border-orange-200">
+                        <Percent className="h-4 w-4 mr-1 text-orange-500" />
+                        Diskon
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Atur Diskon</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <Label htmlFor="orderDiscount">Diskon Total Order (Rp)</Label>
+                          <Input
+                            id="orderDiscount"
+                            type="number"
+                            min="0"
+                            className="mt-1 border-orange-200"
+                            value={orderDiscount}
+                            onChange={(e) => setOrderDiscount(Math.max(0, Number(e.target.value)))}
+                          />
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="mb-2 block">Diskon Per Item</Label>
+                          <ScrollArea className="h-64">
+                            <div className="space-y-3">
+                              {cart.map((item) => (
+                                <div key={item.id} className="grid grid-cols-2 gap-2">
+                                  <div className="text-sm">
+                                    <div className="font-medium">{item.name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {item.quantity} x Rp {item.price.toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max={item.price * item.quantity}
+                                      className="border-orange-200"
+                                      placeholder="Diskon (Rp)"
+                                      value={item.discount || 0}
+                                      onChange={(e) => updateItemDiscount(item.id, Math.max(0, Number(e.target.value)))}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        <div className="flex justify-between">
+                          <Button 
+                            variant="outline" 
+                            onClick={resetDiscounts} 
+                            className="border-orange-200"
+                          >
+                            Reset Semua Diskon
+                          </Button>
+                          <Button 
+                            onClick={() => setIsDiscountDialogOpen(false)}
+                            className="bg-orange-500 hover:bg-orange-600"
+                          >
+                            Terapkan
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )} */}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-grow overflow-auto p-4">
@@ -280,60 +411,95 @@ export default function POSPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Produk</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-center">Qty</TableHead>
+                      <TableHead className="text-center">Diskon</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {cart.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          <div>
-                            {item.name}
-                            <div className="text-xs text-muted-foreground">Rp {item.price.toLocaleString()}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 border-orange-200 hover:bg-orange-50"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            >
-                              -
-                            </Button>
+                    {cart.map((item) => {
+                      const itemTotal = item.price * item.quantity;
+                      const itemDiscount = itemTotal * (item.discount / 100);
+                      const finalItemTotal = itemTotal - itemDiscount;
 
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              {item.name}
+                              <div className="text-xs text-muted-foreground">Rp {item.price.toLocaleString()}</div>
+
+                            </div>
+                          </TableCell>
+
+                          {/* Quantity Controls */}
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-orange-200 hover:bg-orange-50"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              >
+                                -
+                              </Button>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const newQuantity = Math.max(1, parseInt(e.target.value) || 1);
+                                  updateQuantity(item.id, newQuantity);
+                                }}
+                                className="h-8 w-16 text-center font-medium border-orange-200 hover:border-orange-300 focus-visible:ring-orange-500"
+                              />
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-orange-200 hover:bg-orange-50"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              >
+                                +
+                              </Button>
+                            </div>
+                          </TableCell>
+
+                          {/* Discount Input */}
+                          <TableCell className="text-center">
                             <Input
                               type="number"
-                              min="1"
-                              value={item.quantity}
+                              min="0"
+                              max={item.price * item.quantity}
+                              step="0.6"
+                              // className="h-8 w-20 text-center border-orange-200 hover:border-orange-300 focus-visible:ring-orange-500 mt-4"
+                              className="h-8 w-20 text-center font-medium border-orange-200 hover:border-orange-300 focus-visible:ring-orange-500"
+                              placeholder="Diskon"
+                              value={item.discount}
                               onChange={(e) => {
-                                const newQuantity = Math.max(1, parseInt(e.target.value) || 1)
-                                updateQuantity(item.id, newQuantity)
+                                const value = Number(e.target.value);
+                                updateItemDiscount(item.id, value);
                               }}
-                              className="h-8 w-20 text-center font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none border-orange-200 hover:border-orange-300 focus-visible:ring-orange-500"
                             />
+                            {item.discount > 0 && (
+                              <div className="text-xs text-orange-500 flex items-center mt-1">
+                                <span>Rp {item.discount.toLocaleString()}</span>
+                              </div>
+                            )}
+                          </TableCell>
 
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 border-orange-200 hover:bg-orange-50"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            >
-                              +
+                          {/* Subtotal */}
+                          <TableCell className="text-right">Rp {(item.price * item.quantity - item.discount).toLocaleString()}</TableCell>
+
+                          {/* Remove Button */}
+                          <TableCell className="text-center">
+                            <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">Rp {(item.price * item.quantity).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)}>
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -342,6 +508,14 @@ export default function POSPage() {
             {/* Cart summary */}
             <div className="border-t border-orange-200 p-4">
               <div className="space-y-1.5">
+                {cart.some(item => item.discount > 0) && (
+                  <div className="flex justify-between text-orange-500">
+                    <span>Diskon Item (Rp)</span>
+                    <span>
+                      - Rp {cart.reduce((sum, item) => sum + item.discount, 0).toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>Rp {subtotal.toLocaleString()}</span>
@@ -390,8 +564,16 @@ export default function POSPage() {
         total={total}
         tax={tax}
         cart={cart}
+        // orderDiscount={orderDiscount}
         refetchBalance={refetchBalance}
-        onSuccess={() => setCart([])}
+        onSuccess={() => {
+          setCart([]);
+          setOrderDiscount(0);
+        }}
+      // cart={cart.map(item => ({
+      //   ...item,
+      //   discount: item.price * item.quantity * (item.discount / 100),
+      // }))}
       />
 
       {/* Transaction History Modal */}

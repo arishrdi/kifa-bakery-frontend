@@ -39,8 +39,8 @@ export const columns: ColumnDef<Product>[] = [
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-md bg-orange-100 flex items-center justify-center">
           <img
-            src={row.original.image || "/placeholder.svg"}
-            alt="Kosong"
+            src={row.original.image_url}
+            alt="gambar product"
             className="h-10 w-10 rounded-md object-cover"
           />
         </div>

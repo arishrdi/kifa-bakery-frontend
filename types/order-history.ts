@@ -1,3 +1,5 @@
+import { User } from "./auth";
+
 export interface OrderHistoryResponse {
     success: boolean;
     message: string;
@@ -41,7 +43,6 @@ export interface OrderItem {
     id:             number;
     order_number:   string;
     outlet:         string;
-    user:           string;
     total:          string;
 
     subtotal:       string
@@ -54,6 +55,11 @@ export interface OrderItem {
     payment_method: string;
     created_at:     string;
     items:          Item[];
+    user:           User,
+    member?: {
+        name: string
+        member_code: string
+    }
 }
 
 export interface Item {
@@ -61,6 +67,7 @@ export interface Item {
     quantity: number;
     price:    string;
     total:    string;
+    discount: string
 }
 
 export interface Link {

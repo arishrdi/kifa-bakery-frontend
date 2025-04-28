@@ -103,6 +103,15 @@ export default function TransactionDetailDialog({ trx }: { trx: OrderItem }) {
                 }).format(Number(trx.tax))}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span>Diskon: </span>
+              <span>
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR'
+                }).format(Number(trx.discount))}
+              </span>
+            </div>
             <div className="flex justify-between font-semibold">
               <span>Total</span>
               <span>

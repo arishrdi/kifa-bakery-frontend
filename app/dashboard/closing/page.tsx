@@ -154,10 +154,16 @@ export default function ClosingPage() {
                             variant="outline"
                             className={`text-xs px-2 py-1 rounded-full ${transaction.payment_method === "cash"
                               ? "bg-green-100 text-green-800 border-green-200"
-                              : "bg-blue-100 text-blue-800 border-blue-200"
+                              : transaction.payment_method === "qris"
+                                ? "bg-orange-100 text-orange-800 border-orange-200"
+                                : "bg-purple-100 text-purple-800 border-purple-200"
                               }`}
                           >
-                            {transaction.payment_method === "cash" ? "Tunai" : "QRIS"}
+                            {transaction.payment_method === "cash"
+                              ? "Tunai"
+                              : transaction.payment_method === "qris"
+                                ? "QRIS"
+                                : "TRANSFER"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm">

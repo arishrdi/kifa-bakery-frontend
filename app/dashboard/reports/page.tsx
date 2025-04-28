@@ -2925,21 +2925,6 @@ export default function ReportsPage() {
           Laporan dan Analitik
         </h2>
         <div className="flex items-center space-x-2">
-          {/* <Select value={selectedMonth} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Pilih Bulan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-
-                {monthOptions.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select> */}
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
             Cetak

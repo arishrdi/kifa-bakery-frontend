@@ -70,7 +70,7 @@ export default function ShiftsPage() {
   };
 
   const { data: outlets } = getAllOutlets();
-  const queryStaff = getAllStaffByOutlet(currentOutlet?.id || 1);
+ const queryStaff = getAllStaffByOutlet(currentOutlet?.id || 1);
   const { data: staffs, refetch: refetchStaffs } = queryStaff();
   const { mutate: createStaffMutate, isPending: isCreating } = createStaff();
   const delStaff = deleteStaff();
@@ -241,7 +241,7 @@ export default function ShiftsPage() {
                     <Input
                       id="password"
                       name="password"
-                      type="password"
+                      type="text"
                       placeholder="Password"
                       className="col-span-3"
                       value={formData.password || ""}

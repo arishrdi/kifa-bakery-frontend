@@ -20,6 +20,9 @@ export interface Outlet {
   is_active: boolean;
   created_at: null;
   updated_at: null;
+  atas_nama_bank: string,
+  nama_bank: string,
+  nomor_transaksi_bank: string,
 }
 
 export interface OutletInput extends Omit<Outlet, "id" | "created_at" | "updated_at"> { }

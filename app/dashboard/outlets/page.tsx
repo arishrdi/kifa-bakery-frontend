@@ -26,6 +26,9 @@ export default function OutletsPage() {
   const { data: outlets, isLoading: isLoadingOutlets, refetch: refetchOutlets } = getAllOutlets()
   const { mutate: createOutletMutate, isPending: isCreatingOutlet } = createOutlet()
 
+  // const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false)
+  // const [transactionNumber, setTransactionNumber] = useState("")
+
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -44,6 +47,9 @@ export default function OutletsPage() {
     tax: '',
     qris: null,
     is_active: true,
+    atas_nama_bank: null,
+    nama_bank: null,
+    nomor_transaksi_bank: null,
   }
 
   const [formData, setFormData] = useState(initialFormData)
@@ -69,6 +75,9 @@ export default function OutletsPage() {
     formDataToSend.append('phone', formData.phone)
     formDataToSend.append('email', formData.email)
     formDataToSend.append('tax', formData.tax.toString())
+    formDataToSend.append('atas_nama_bank', formData.atas_nama_bank || '')
+    formDataToSend.append('nama_bank', formData.nama_bank || '')
+    formDataToSend.append('nomor_transaksi_bank', formData.nomor_transaksi_bank || '')
     if (formData.qris) {
       formDataToSend.append('qris', formData.qris)
     }
@@ -105,6 +114,9 @@ export default function OutletsPage() {
     formDataToSend.append('email', formData.email)
     formDataToSend.append('tax', formData.tax.toString())
     formDataToSend.append('is_active', formData.is_active ? '1' : '0')
+    formDataToSend.append('atas_nama_bank', formData.atas_nama_bank || '') // Tambahkan ini
+    formDataToSend.append('nama_bank', formData.nama_bank || '') // Tambahkan ini
+    formDataToSend.append('nomor_transaksi_bank', formData.nomor_transaksi_bank || '') // Tambahkan ini  
 
     if (formData.qris) {
       formDataToSend.append('qris', formData.qris)
@@ -143,7 +155,10 @@ export default function OutletsPage() {
       is_active: outlet.is_active,
       phone: outlet.phone,
       tax: outlet.tax,
-      qris: null
+      qris: null,
+      atas_nama_bank: outlet.atas_nama_bank || '',
+      nama_bank: outlet.nama_bank || '',
+      nomor_transaksi_bank: outlet.nomor_transaksi_bank || ''
     })
 
     setPreviewQris(outlet.qris_url)
@@ -237,7 +252,7 @@ export default function OutletsPage() {
                         <Label>Nama Outlet</Label>
                         <Input
                           name="name"
-                          value={formData.name}
+                          value={formData.name ?? ""} 
                           onChange={handleInputChange}
                           placeholder="Masukkan nama outlet"
                           required
@@ -247,7 +262,7 @@ export default function OutletsPage() {
                         <Label>Nomor Telepon</Label>
                         <Input
                           name="phone"
-                          value={formData.phone}
+                          value={formData.phone ?? ""}
                           onChange={handleInputChange}
                           placeholder="Masukkan nomor telepon"
                           required
@@ -259,7 +274,7 @@ export default function OutletsPage() {
                       <Label>Alamat Lengkap</Label>
                       <Input
                         name="address"
-                        value={formData.address}
+                        value={formData.address ?? ""}
                         onChange={handleInputChange}
                         placeholder="Masukkan alamat lengkap"
                         required
@@ -276,7 +291,7 @@ export default function OutletsPage() {
                         <Input
                           name="email"
                           type="email"
-                          value={formData.email}
+                          value={formData.email ?? ""}
                           onChange={handleInputChange}
                           placeholder="Masukkan alamat email"
                           required
@@ -287,12 +302,48 @@ export default function OutletsPage() {
                         <Input
                           name="tax"
                           type="number"
-                          value={formData.tax}
+                          value={formData.tax ?? ""}
                           onChange={handleInputChange}
                           placeholder="Masukkan persentase pajak"
                           required
                         />
                       </div>
+                    </div>
+                  </div>
+                  {/* transaksi input */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/40">
+                    <h3 className="font-medium text-base">Nomor Transaksi</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nomor Transaksi Default</Label>
+                        <Input
+                          name="nomor_transaksi_bank" // Sesuaikan dengan key formData
+                          value={formData.nomor_transaksi_bank ?? ""}
+                          onChange={handleInputChange}
+                          placeholder="823737372323"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nama Bank</Label>
+                        <Input
+                          name="nama_bank" // Sudah sesuai
+                          value={formData.nama_bank ?? ""}
+                          onChange={handleInputChange}
+                          placeholder="BCA"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Atas Nama</Label>
+                        <Input
+                          name="atas_nama_bank" // Sesuaikan dengan key formData
+                          value={formData.atas_nama_bank ?? ""}
+                          onChange={handleInputChange}
+                          placeholder="Hardi Sutanto"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Format penomoran akan digunakan untuk transaksi baru di outlet ini
                     </div>
                   </div>
 

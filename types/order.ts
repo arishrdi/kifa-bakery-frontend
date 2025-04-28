@@ -1,9 +1,10 @@
+import { Product } from "./product";
 import { StatusMessage } from "./response";
 
 export interface OrderInput {
   outlet_id: number;
   shift_id: number;
-  payment_method: string;
+  payment_method: 'cash' | 'qris' | 'transfer';
   total_paid: number;
   tax: number;
   member_id?: number
@@ -78,4 +79,5 @@ export interface Item {
   subtotal: string;
   created_at: Date;
   updated_at: Date;
+  // product: Product
 }

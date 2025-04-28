@@ -1,3 +1,5 @@
+"use client"
+
 import React, { ChangeEvent, FormEvent, SetStateAction, useState, useMemo } from 'react'
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -91,7 +93,6 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
             onSuccess: (response) => {
                 refetch()
 
-                // Cek tipe transaksi dan status
                 if (inventoryFormData.type === 'adjustment') {
                     toast({
                         title: "Berhasil mengajukan penyesuaian stok!",
@@ -103,6 +104,13 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
                         description: "Perubahan stok telah berhasil diterapkan"
                     })
                 }
+
+                setInventoryFormData(initialInventoryFormData)
+                setSearchTerm('')
+
+                // setTimeout(() => {
+                //     setIsAdjustStockDialogOpen(false)
+                // }, 2000)
             },
             onError: () => {
                 toast({
@@ -113,6 +121,7 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
             }
         })
     }
+
 
     return (
         <form onSubmit={handleAdjustStockSubmit}>
@@ -205,10 +214,19 @@ export default function FormAdjustStock({ setIsAdjustStockDialogOpen, products, 
                 >
                     Batal
                 </Button>
-                <Button type="submit" className="gap-2 bg-orange-600 hover:bg-orange-700" disabled={createInventory.isPending}>
-                    {createInventory.isPending ? <Loader2 className='animate-spin h-4 w-4' /> : <Plus className="h-4 w-4" />}
+                <Button
+                    type="submit"
+                    className="gap-2 bg-orange-600 hover:bg-orange-700"
+                    disabled={createInventory.isPending}
+                >
+                    {createInventory.isPending ? (
+                        <Loader2 className="animate-spin h-4 w-4" />
+                    ) : (
+                        <Plus className="h-4 w-4" />
+                    )}
                     Sesuaikan Stok
                 </Button>
+
             </DialogFooter>
         </form>
     )

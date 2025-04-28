@@ -27,6 +27,8 @@ import {
   Truck,
   UserRound,
   BookUser,
+  Settings,
+  Printer,
 } from "lucide-react"
 import {
   Sidebar,
@@ -132,6 +134,22 @@ export function SidebarNav() {
         ] : [])
       ],
     },
+    ...(user?.role === "admin" ? [
+
+      {
+        name: "Pengaturan",
+        href: "/dashboard/setting",
+        icon: Settings,
+        subItems: [
+          { 
+            name: "Template Print", 
+            href: "/dashboard/setting/print",
+            icon: Printer 
+          },
+        ],
+      }
+    ] : [])
+
   ]
 
   const toggleSection = (name: string) => {

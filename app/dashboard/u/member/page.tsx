@@ -177,11 +177,11 @@ export default function MemberPage() {
             }
           }}>
             <DialogTrigger asChild>
-              {user?.role === "admin" && (
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Tambah Member
-                </Button>
-              )}
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Tambah Member
+              </Button>
+              {/* {user?.role === "admin" && (
+              )} */}
 
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
@@ -207,20 +207,23 @@ export default function MemberPage() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="member_code" className="text-right">
-                      Kode
-                    </Label>
-                    <Input
-                      id="member_code"
-                      name="member_code"
-                      placeholder="Kode member"
-                      className="col-span-3"
-                      value={formData.member_code || ""}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
+                  {selectedMember && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="member_code" className="text-right">
+                        Kode
+                      </Label>
+                      <Input
+                        id="member_code"
+                        name="member_code"
+                        placeholder="Kode member"
+                        className="col-span-3"
+                        value={formData.member_code || ""}
+                        // onChange={handleInputChange}
+                        disabled
+                        required
+                      />
+                    </div>
+                  )}
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="phone" className="text-right">
                       Telp
@@ -366,9 +369,9 @@ export default function MemberPage() {
                 <TableHead>Alamat</TableHead>
                 <TableHead>Jenis Kelamin</TableHead>
                 <TableHead>Total transaksi</TableHead>
-                {user?.role === "admin" && (
-                  <TableHead className="text-right">Aksi</TableHead>
-                )}
+                <TableHead className="text-right">Aksi</TableHead>
+                {/* {user?.role === "admin" && (
+                )} */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -387,36 +390,34 @@ export default function MemberPage() {
                   <TableCell>{member.address ?? '-'}</TableCell>
                   <TableCell>{member.gender === 'male' ? "Laki-laki" : "Perempuan"}</TableCell>
                   <TableCell>{member.orders_count}</TableCell>
-                  {user?.role === "admin" && (
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Buka menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/u/member/${member.id}`}>
-                              <History className="mr-2 h-4 w-4" /> Transaksi
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDeleteClick(member)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Buka menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/u/member/${member.id}`}>
+                            <History className="mr-2 h-4 w-4" /> Transaksi
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleDeleteClick(member)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
 
                 </TableRow>
               ))}

@@ -115,6 +115,7 @@ export const printOrders = ({ transactions, outlet }: PrintOrdersProps) => {
             <div><span>Tanggal:</span> ${order.created_at}</div>
             <div><span>Kasir:</span> ${order.user}</div>
             <div><span>Pajak:</span> Rp ${formatRupiah(order.tax)}</div>
+            <div><span>Diskon:</span> Rp ${formatRupiah(order.discount)}</div>
             <div><span>Total:</span> Rp ${formatRupiah(order.total)}</div>
             <div><span>Status:</span> ${order.status=== "completed" ? "Selesai" : order.status === "cancelled" ? "Dibatalkan" : "Pending"}</div>
           </div>

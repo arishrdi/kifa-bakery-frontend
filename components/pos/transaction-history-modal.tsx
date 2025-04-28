@@ -19,6 +19,7 @@ import { Outlet } from "@/types/outlet"
 import { printOrders } from "./print-orders"
 import TransactionDetailDialog from "../transaction-detail-dialog"
 import { DateRangePicker } from "../ui/date-range-picker"
+import { usePrintTemplateByOutlet } from "@/services/print-template-service"
 
 interface TransactionHistoryModalProps {
   open: boolean
@@ -43,6 +44,7 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
   const [searchQuery, setSearchQuery] = useState("")
 
   const { user } = useAuth()
+  const { data: templateData } = usePrintTemplateByOutlet(user?.outlet_id ?? 0)
   const orderHistory = getHistoryOrders(user?.outlet_id, format(dateRange?.from ?? new Date(), 'yyyy-MM-dd'), format(dateRange?.to ?? new Date, 'yyyy-MM-dd'))
 
   const { data: transactionData } = orderHistory()
@@ -133,13 +135,13 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
         <body>
           <div class="header">
             <div class="logo-container">
-              <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+              <img src="${templateData?.data?.logo_url}" 
                   alt="Logo Outlet" 
                   class="logo"/>
             </div>
             <div class="header-text">
-              <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
-              <div class="info">Rajanya Roti Hajatan</div>
+             <div class="title">${templateData?.data?.company_name}</div>
+              <div class="info">${templateData?.data?.company_slogan}</div>
               <div class="info">${outlet.name}</div>
               <div class="info">Alamat: ${outlet.address}</div>
               <div class="info">Telp: ${outlet.phone}</div>
@@ -156,32 +158,39 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
             ${transaction.items.map(item => `
               <div class="item">
                 <div>${item.quantity}x ${item.product}</div>
-                <div>Rp ${Number(item.price * item.quantity).toLocaleString()}</div>
+                <div>
+                  Rp ${Number(Number(item.price) * item.quantity).toLocaleString()}
+                  ${Number(item.discount) > 0 ? ` (-${Number(item.discount).toLocaleString()})` : ''}
+                </div>
               </div>
               `).join('')}
-              ${parseInt(transaction.tax) > 0
-          ? `
-                <div class="item">
-                <div>PPN:</div>
-                <div>Rp ${Number(transaction.tax).toLocaleString()}</div>
-                </div>
-                `
-          : ''
-        }
               <div class="divider"></div>
+              ${parseInt(transaction.tax) > 0
+                ? `
+                      <div class="item">
+                        <div>PPN:</div>
+                        <div>Rp ${Number(transaction.tax).toLocaleString()}</div>
+                      </div>
+                      `
+                : ''
+              }
               <div class="item">
                 <div>Subtotal: </div>
                 <div>Rp ${Number(transaction.subtotal).toLocaleString()}</div>
               </div>
+              <div class="item">
+                <div>Total Diskon:</div>
+                <div>Rp -${Number(transaction.discount).toLocaleString()}</div>
+              </div>
           </div>
           <div class="divider"></div>
           <div class="total">Total: Rp ${Number(transaction.total).toLocaleString()}</div>
-           ${transaction.payment_method === 'cash'
-          ? `
           <div class="item">
             <div>Metode Pembayaran:</div>
-            <div>${transaction.payment_method === "cash" ? "TUNAI" : "QRIS"}</div>
+            <div>${transaction.payment_method === "cash" ? "TUNAI" : transaction.payment_method === "qris" ? "QRIS" : "TRANSFER"}</div>
           </div>
+           ${transaction.payment_method === 'cash'
+          ? `
           <div class="item">
             <div>Bayar:</div>
             <div>Rp ${Number(transaction.total_paid).toLocaleString()}</div>
@@ -194,8 +203,13 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
           : ''
         }
           <div class="divider"></div>
+          ${transaction.member ? `
+            <div class="info">
+                Member: ${transaction.member.name} (${transaction.member.member_code})
+            </div>
+        ` : ''}
           <div class="footer">
-            Terima kasih atas kunjungan Anda!
+            ${templateData?.data?.footer_message}
           </div>
         </body>
         </html>
@@ -232,28 +246,6 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
               value={dateRange}
               onChange={handleDateRangeChange}
             />
-            {/* <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "justify-start text-left font-normal border-orange-200",
-                    !date && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(newDate) => newDate && setDate(newDate)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover> */}
             {user?.id && transactionData?.data.total_orders ? <Button onClick={() => printOrders({ outlet: user?.outlet, transactions: transactionData?.data })}><Printer /> Cetak</Button> : null}
           </div>
           <div className="relative w-full sm:w-auto">
@@ -312,11 +304,17 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
                       <Badge
                         variant="outline"
                         className={`text-xs px-2 py-1 rounded-full ${transaction.payment_method === "cash"
-                          ? "bg-green-100 text-green-800 border-green-200"
-                          : "bg-blue-100 text-blue-800 border-blue-200"
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : transaction.payment_method === "qris"
+                              ? "bg-orange-100 text-orange-800 border-orange-200"
+                              : "bg-purple-100 text-purple-800 border-purple-200"
                           }`}
                       >
-                        {transaction.payment_method === "cash" ? "Tunai" : "QRIS"}
+                        {transaction.payment_method === "cash"
+                          ? "Tunai"
+                          : transaction.payment_method === "qris"
+                            ? "QRIS"
+                            : "TRANSFER"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">

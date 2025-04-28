@@ -13,7 +13,7 @@ export interface Member {
     orders_count: number
 }
 
-export interface MemberInput extends Omit<Member, "id" | "created_at" | "updated_at" | "orders_count"> { }
+export interface MemberInput extends Omit<Member, "id" | "created_at" | "updated_at" | "orders_count" | "member_code"> { }
 
 export interface AllMemberResponse extends StatusMessage {
   data: Member[];

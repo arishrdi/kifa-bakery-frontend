@@ -1,11 +1,15 @@
+import { usePrintTemplateByOutlet } from "@/services/print-template-service"
 import { OrderItem } from "@/types/order-history"
 import { Outlet } from "@/types/outlet"
+import { PrintTemplate } from "@/types/template-print"
 
-export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
-    const printWindow = window.open('', '_blank', 'width=400,height=600')
+export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet, templateData: PrintTemplate) => {
 
-    if (printWindow) {
-      const receiptContent = `
+
+  const printWindow = window.open('', '_blank', 'width=400,height=600')
+
+  if (printWindow) {
+    const receiptContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -78,13 +82,13 @@ export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
         <body>
           <div class="header">
             <div class="logo-container">
-              <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png" 
+              <img src="${templateData?.logo_url}" 
                   alt="Logo Outlet" 
                   class="logo"/>
             </div>
             <div class="header-text">
-              <div class="title">${process.env.NEXT_PUBLIC_APP_NAME || 'KIFA BAKERY'}</div>
-              <div class="info">Rajanya Roti Hajatan</div>
+              <div class="title">${templateData?.company_name}</div>
+              <div class="info">${templateData?.company_slogan}</div>
               <div class="info">${outlet.name}</div>
               <div class="info">Alamat: ${outlet.address}</div>
               <div class="info">Telp: ${outlet.phone}</div>
@@ -94,39 +98,46 @@ export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
             <div class="divider"></div>
             <div class="info">No. Invoice: ${transaction.order_number}</div>
             <div class="info">Tanggal: ${transaction.created_at}</div>
-            <div class="info">Kasir: ${transaction.user.name}</div>
+            <div class="info">Kasir: ${transaction.user}</div>
           </div>
           <div class="divider"></div>
           <div>
             ${transaction.items.map(item => `
               <div class="item">
-                <div>${item.quantity}x ${item.product.name}</div>
-                <div>Rp ${Number(item.price * item.quantity).toLocaleString()}</div>
+                <div>${item.quantity}x ${item.product}</div>
+                <div>
+                  Rp ${Number(Number(item.price) * item.quantity).toLocaleString()}
+                  ${Number(item.discount) > 0 ? ` (-${Number(item.discount).toLocaleString()})` : ''}
+                </div>
               </div>
               `).join('')}
+              <div class="divider"></div>
               ${parseInt(transaction.tax) > 0
-          ? `
+        ? `
                 <div class="item">
-                <div>PPN:</div>
-                <div>Rp ${Number(transaction.tax).toLocaleString()}</div>
+                  <div>PPN:</div>
+                  <div>Rp ${Number(transaction.tax).toLocaleString()}</div>
                 </div>
                 `
-          : ''
-        }
-              <div class="divider"></div>
-              <div class="item">
-                <div>Subtotal: </div>
-                <div>Rp ${Number(transaction.subtotal).toLocaleString()}</div>
-              </div>
+        : ''
+      }
+          <div class="item">
+            <div>Subtotal: </div>
+            <div>Rp ${Number(transaction.subtotal).toLocaleString()}</div>
+          </div>
+          <div class="item">
+            <div>Total Diskon:</div>
+            <div>Rp -${Number(transaction.discount).toLocaleString()}</div>
+          </div>
           </div>
           <div class="divider"></div>
           <div class="total">Total: Rp ${Number(transaction.total).toLocaleString()}</div>
-           ${transaction.payment_method === 'cash'
-          ? `
           <div class="item">
             <div>Metode Pembayaran:</div>
-            <div>${transaction.payment_method === "cash" ? "TUNAI" : "QRIS"}</div>
+            <div>${transaction.payment_method === "cash" ? "TUNAI" : transaction.payment_method === "qris" ? "QRIS" : "TRANSFER" }</div>
           </div>
+           ${transaction.payment_method === 'cash'
+        ? `
           <div class="item">
             <div>Bayar:</div>
             <div>Rp ${Number(transaction.total_paid).toLocaleString()}</div>
@@ -136,29 +147,34 @@ export const handlePrintReceipt = (transaction: OrderItem, outlet: Outlet) => {
             <div>Rp ${Number(transaction.change).toLocaleString()}</div>
           </div>
         `
-          : ''
-        }
+        : ''
+      }
           <div class="divider"></div>
+           ${transaction.member ? `
+            <div class="info">
+                Member: ${transaction.member.name} (${transaction.member.member_code})
+            </div>
+        ` : ''}
           <div class="footer">
-            Terima kasih atas kunjungan Anda!
+            ${templateData?.footer_message}
           </div>
         </body>
         </html>
       `
 
-      // Write content to the new window
-      printWindow.document.open()
-      printWindow.document.write(receiptContent)
-      printWindow.document.close()
+    // Write content to the new window
+    printWindow.document.open()
+    printWindow.document.write(receiptContent)
+    printWindow.document.close()
 
-      // Trigger print when content is loaded
-      printWindow.onload = function () {
-        printWindow.print()
-        // Close the window after printing (optional - some browsers might close automatically)
-        // printWindow.close()
-      }
-    } else {
-      console.error('Failed to open print window')
-      alert('Tidak dapat membuka jendela cetak. Periksa pengaturan popup browser Anda.')
+    // Trigger print when content is loaded
+    printWindow.onload = function () {
+      printWindow.print()
+      // Close the window after printing (optional - some browsers might close automatically)
+      // printWindow.close()
     }
+  } else {
+    console.error('Failed to open print window')
+    alert('Tidak dapat membuka jendela cetak. Periksa pengaturan popup browser Anda.')
   }
+}

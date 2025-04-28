@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Banknote, CheckCircle, CreditCard, Loader2 } from "lucide-react"
+import { Banknote, CheckCircle, CreditCard, Loader2, QrCode } from "lucide-react"
 
 // Keep the imports and add ScrollArea import
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -19,33 +19,38 @@ import { createOrder } from "@/services/order-service"
 import { useAuth } from "@/contexts/auth-context"
 import { useInvalidateQueries } from "@/hooks/use-invalidate-queries"
 import Image from "next/image"
-import { handlePrintReceipt, PrintInvoice } from "./print-invoice"
+import { handlePrintReceipt } from "./print-invoice"
 import { useQueryClient } from "@tanstack/react-query"
 import { MemberComboBox } from "@/app/pos/member-combobox"
 import { Member } from "@/types/member"
 import { OrderResponse } from "@/types/order"
 import { useOutlet } from "@/contexts/outlet-context"
+import { usePrintTemplateByOutlet } from "@/services/print-template-service"
 
 interface PaymentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   total: number,
   tax: number,
-  cart: Array<{ id: number; name: string; price: number; quantity: number }>
+  discount: number
+  cart: Array<{ id: number; name: string; price: number; quantity: number, discount: number }>
   onSuccess: () => void
   refetchBalance: any
 }
 
-export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, onSuccess, tax }: PaymentModalProps) {
+export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, onSuccess, tax, discount }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>("tunai");
   const [amountPaid, setAmountPaid] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
   const [completed, setCompleted] = useState<boolean>(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderResponse["data"] | null>(null);
+  const [orderDiscount, setOrderDiscount] = useState<number>(0);
 
   const { user } = useAuth();
   const { mutate: createOrderMutation, isPending: isCreatingOrder } = createOrder();
+  const { data: templateData } = usePrintTemplateByOutlet(user?.outlet_id ?? 0)
+
   const { invalidate } = useInvalidateQueries();
 
   // Reset all states when modal closes
@@ -62,34 +67,58 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
 
   const handlePayment = () => {
     if (!user) return;
-
-    setProcessing(true);
-
+  
+    // Hitung subtotal sebelum diskon
+    const rawSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+    // Hitung total diskon item (dalam nominal)
+    const items = cart.map(item => ({
+      product_id: item.id,
+      quantity: item.quantity,
+      price: item.price,
+      discount: item.discount, // Sudah dalam nominal (Rp)
+    }));
+  
+    const totalItemDiscount = items.reduce((sum, item) => sum + item.discount, 0);
+  
+    // Hitung total diskon (item + order discount)
+    const totalDiscount = Math.min(
+      rawSubtotal, // Jangan melebihi subtotal
+      totalItemDiscount + (discount || 0)
+    );
+  
+    // Hitung total akhir
+    const finalTotal = Math.max(0, rawSubtotal - totalDiscount + tax);
+  
+    console.log("Data yang dikirim:", {
+      items,
+      discount: totalDiscount,
+      tax,
+      total: finalTotal
+    });
+  
     createOrderMutation({
       outlet_id: user.outlet_id,
       shift_id: user.last_shift.id,
-      payment_method: paymentMethod === "tunai" ? "cash" : "qris",
+      payment_method: paymentMethod === "tunai" ? "cash" : paymentMethod === "transfer" ? 'transfer': "qris",
       total_paid: Number(amountPaid),
       tax: tax,
+      discount: totalDiscount,
       member_id: selectedMember?.id,
-      items: cart.map((item) => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price,
-      })),
+      items: items,
     }, {
       onSuccess: (data) => {
         invalidate(['products-outlet', `${user.outlet_id}`]);
         invalidate(['orders-history', `${user.outlet_id}`]);
         invalidate(['cash-register', `${user.outlet_id}`]);
         invalidate(['revenue', `${user.outlet_id}`]);
-
+  
         refetchBalance();
-
+  
         if (data) {
           setSelectedOrder(data.data);
         }
-
+  
         setCompleted(true);
         onSuccess();
         setProcessing(false);
@@ -131,10 +160,10 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
             <h3 className="text-sm font-medium text-green-700">Pembayaran Berhasil!</h3>
             <p className="mt-1 text-xs text-muted-foreground">Transaksi telah berhasil diselesaikan</p>
             <div className="flex justify-center gap-5 mt-3">
-              <Button variant="ghost" onClick={() => handlePrintReceipt(selectedOrder, user?.outlet)}>
+              <Button variant="default" onClick={() => handlePrintReceipt(selectedOrder, user?.outlet, templateData.data)}>
                 Cetak Struk
               </Button>
-              <Button variant="destructive" onClick={handleClose}>
+              <Button variant="outline" className="text-destructive" onClick={handleClose}>
                 Tutup
               </Button>
             </div>
@@ -166,10 +195,20 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
                   </div>
                   <div
                     className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer"
+                    onClick={() => setPaymentMethod("transfer")}
+                  >
+                    <RadioGroupItem value="transfer" id="transfer" />
+                    <CreditCard className="h-3 w-3 text-orange-500 ml-1 mr-2" />
+                    <Label htmlFor="transfer" className="cursor-pointer flex-1 text-xs">
+                      Transfer
+                    </Label>
+                  </div>
+                  <div
+                    className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer"
                     onClick={() => setPaymentMethod("qris")}
                   >
                     <RadioGroupItem value="qris" id="qris" />
-                    <CreditCard className="h-3 w-3 text-orange-500 ml-1 mr-2" />
+                    <QrCode className="h-3 w-3 text-orange-500 ml-1 mr-2" />
                     <Label htmlFor="qris" className="cursor-pointer flex-1 text-xs">
                       QRIS
                     </Label>
@@ -210,6 +249,14 @@ export function PaymentModal({ open, onOpenChange, total, refetchBalance, cart, 
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {paymentMethod === "transfer" && (
+                <div className="mb-3 space-y-1 text-xs text-muted-foreground border rounded-md p-3">
+                  <div><span className="font-semibold">Nama Pemilik:</span> {user?.outlet.atas_nama_bank}</div>
+                  <div><span className="font-semibold">Bank:</span> {user?.outlet.nama_bank}</div>
+                  <div><span className="font-semibold">Nomor Rekening:</span> {user?.outlet.nomor_transaksi_bank}</div>
                 </div>
               )}
               {paymentMethod === "qris" && (

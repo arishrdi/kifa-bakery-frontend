@@ -249,7 +249,7 @@ export default function ProductsContent() {
       quantity: product.quantity.toString(),
       min_stock: product.min_stock.toString()
     });
-    setPreviewImage(product.image || null);
+    setPreviewImage(product.image_url || null);
     setIsEditProductOpen(true);
   };
 
@@ -507,7 +507,7 @@ export default function ProductsContent() {
                     <div className="flex items-start gap-6">
                       <div className="flex flex-col items-center gap-2">
                         <div className="relative h-32 w-32 rounded-lg border-2 border-dashed bg-background">
-                          {isEditProductOpen ? (
+                          {isEditProductOpen || isAddProductOpen ? (
                             previewImage ? (
                               <img
                                 src={previewImage}
@@ -528,7 +528,7 @@ export default function ProductsContent() {
                         <span className="text-xs text-muted-foreground text-center">
                           Format: JPEG/PNG (opsional)
                           <br />
-                          Maks. 2MB
+                          Maks. 10MB
                         </span>
                       </div>
 
@@ -615,7 +615,7 @@ export default function ProductsContent() {
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-md bg-orange-100 flex items-center justify-center">
                   <img
-                    src={selectedProduct.image || "/placeholder.svg"}
+                    src={selectedProduct.image_url || "/placeholder.svg"}
                     alt={selectedProduct.name}
                     className="h-12 w-12 rounded-md object-cover"
                   />
