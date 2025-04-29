@@ -18,6 +18,8 @@ export interface OrderHistoryInput {
 export interface HistoryOrder {
     total_orders:   number;
     total_revenue:  string;
+    average_order_value: number;
+    total_items_sold: number;
     date_from:      string;
     date_to:        string;
     orders:         OrderItem[];
@@ -66,6 +68,8 @@ export interface Item {
     product:  string;
     quantity: number;
     price:    string;
+    unit:    string;
+    sku:    string;
     total:    string;
     discount: string
 }

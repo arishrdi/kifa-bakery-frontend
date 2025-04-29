@@ -123,12 +123,13 @@ export function SidebarNav() {
       href: "/dashboard/reports",
       icon: FileBarChart,
       subItems: [
-        { name: "Perhari", href: "/dashboard/reports?tab=dailySales", icon: LineChart },
+        // { name: "Perhari", href: "/dashboard/reports?tab=dailySales", icon: LineChart },
+        { name: "Perhari", href: "/dashboard/reports?tab=perday", icon: LineChart },
         { name: "Per Item", href: "/dashboard/reports?tab=monthly", icon: FileBarChart },
         { name: "Per Kategori", href: "/dashboard/reports?tab=kategori", icon: BarChart },
         { name: "Per Member", href: "/dashboard/reports?tab=productByMember", icon: UserRound },
         { name: "Stok", href: "/dashboard/reports?tab=stock", icon: Package },
-        { name: "Stok Realtime", href: "/dashboard/reports?tab=realtime", icon: Package },
+        { name: "Riwayat Stok", href: "/dashboard/reports?tab=realtime", icon: Package },
         ...(user?.role === "admin" ? [
           { name: "Approve", href: "/dashboard/reports?tab=approve", icon: ArrowLeftRight },
         ] : [])

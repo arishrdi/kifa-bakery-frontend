@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import html2canvas from 'html2canvas';
 import { DateRange } from "react-day-picker"
 import { getCookie } from "cookies-next";
@@ -10,7 +10,7 @@ import { PackageOpen, PackageCheck, PackageMinus, PackagePlus } from "lucide-rea
 import { toast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { getSalesByCategory, getSalesDaily, useApprovalReports } from "@/services/report-service";
+import { getInventoryHistoryByType, getSalesByCategory, getSalesDaily, useApprovalReports } from "@/services/report-service";
 import { useOutlet } from "@/contexts/outlet-context";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import RealtimeStock from "@/components/report/real-time";
@@ -71,107 +71,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Import custom icons instead of using the custom components
-import { DollarSign } from "@/components/ui/dollar-sign";
-import { CreditCard } from "@/components/ui/credit-card";
-import { Receipt } from "@/components/ui/receipt";
-import { Package } from "@/components/ui/package";
-import VisuallyHidden from "@/components/ui/visually-hidden";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import ApprovalReport from "@/components/report/approve";
-
-const salesData = [
-  { name: "Jan", total: 150000000 },
-  { name: "Feb", total: 140000000 },
-  { name: "Mar", total: 170000000 },
-  { name: "Apr", total: 180000000 },
-  { name: "Mei", total: 165000000 },
-  { name: "Jun", total: 190000000 },
-  { name: "Jul", total: 185000000 },
-  { name: "Agu", total: 195000000 },
-  { name: "Sep", total: 200000000 },
-  { name: "Okt", total: 210000000 },
-  { name: "Nov", total: 220000000 },
-  { name: "Des", total: 250000000 },
-];
-
-const stockTrendData = [
-  { name: "Minggu 1", stock: 120 },
-  { name: "Minggu 2", stock: 100 },
-  { name: "Minggu 3", stock: 80 },
-  { name: "Minggu 4", stock: 140 },
-];
-
-const topProductsData = [
-  {
-    id: 1,
-    name: "Produk A",
-    category: "Kategori 1",
-    sales: 450,
-    revenue: 11250000,
-  },
-  {
-    id: 2,
-    name: "Produk D",
-    category: "Kategori 3",
-    sales: 380,
-    revenue: 17100000,
-  },
-  {
-    id: 3,
-    name: "Produk B",
-    category: "Kategori 2",
-    sales: 320,
-    revenue: 11200000,
-  },
-  {
-    id: 4,
-    name: "Produk F",
-    category: "Kategori 1",
-    sales: 280,
-    revenue: 18200000,
-  },
-  {
-    id: 5,
-    name: "Produk H",
-    category: "Kategori 2",
-    sales: 250,
-    revenue: 21250000,
-  },
-];
-
-const monthlyReportsData = [
-  {
-    id: 1,
-    month: "Januari",
-    year: "2023",
-    totalSales: 150000000,
-    totalTransactions: 3000,
-    avgTicket: 50000,
-  },
-  {
-    id: 2,
-    month: "Februari",
-    year: "2023",
-    totalSales: 140000000,
-    totalTransactions: 2800,
-    avgTicket: 50000,
-  },
-  {
-    id: 3,
-    month: "Maret",
-    year: "2023",
-    totalSales: 170000000,
-    totalTransactions: 3400,
-    avgTicket: 50000,
-  },
-];
+import { Input } from "@/components/ui/input";
+import PerDay from "@/components/report/per-day";
+import { getHistoryOrders } from "@/services/order-service";
 
 export default function ReportsPage() {
   const { currentOutlet, outlets } = useOutlet();
@@ -181,20 +84,23 @@ export default function ReportsPage() {
 
   const [date, setDate] = useState<Date>(new Date());
   const [selectedOutletId, setSelectedOutletId] = useState<string>("1");
-  const [reportType, setReportType] = useState<string>("monthly");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [monthlyReportsData, setMonthlyReportsData] = useState([]);
-  // const [selectedMonth, setSelectedMonth] = useState<string>("march");
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedReportType, setSelectedReportType] = useState<string>("monthly");
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
   const [productsData, setProductsData] = useState([]);
 
+  const [searchProducts, setSearchProduct] = useState("")
+  const [filteredMonthlyData, setFilteredMonthlyData] = useState([])
+  const [filteredInventoryData, setFilteredInventoryData] = useState([])
+  const [filteredCategoriesData, setFilteredCategoriesData] = useState([])
 
   const [summaryData, setSummaryData] = useState(null);
   const [dateRangeMember, setDateRangeMember] = useState({
+    from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
+    to: new Date() // Hari ini
+  });
+
+  const [dateRangeSales, setDateRangeSales] = useState({
     from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
     to: new Date() // Hari ini
   });
@@ -207,70 +113,90 @@ export default function ReportsPage() {
     to: new Date() // Hari ini
   });
 
+  const [dateRangePerDay, setDateRangePerDay] = useState({
+    from: new Date(new Date().setDate(1)),
+    to: new Date()
+  });
+
+  const [dateRangeRealtime, setDateRangeRealtime] = useState({
+    from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
+    to: new Date() // Hari ini
+  });
+
   const outletId = 1;
 
   const { data } = useQuery(getSalesByCategory(outletId, dateRange));
 
-  const { data: salesData } = useQuery({
-    ...getSalesDaily(outletId),
-  });
+  const orderHistory = getHistoryOrders(currentOutlet?.id, format(dateRangePerDay?.from ?? new Date(), 'yyyy-MM-dd'), format(dateRangePerDay?.to ?? new Date, 'yyyy-MM-dd'))
 
-  // const { 
-  //   data: categoryData, 
-  //   isLoading: isLoadingCategories,
-  //   error: categoryError
-  // } = useQuery(getSalesByCategory(outletId, dateRange));
+  const { data: transactionData } = orderHistory()
 
-  // const { 
-  //   data: dailyData,
-  //   isLoading: isLoadingDaily,
-  //   error: dailyError
-  // } = useQuery(getSalesDaily(outletId));
-
-  // const { data } = useQuery({
-  //   queryKey: ['getSalesByCategory', outletId, dateRange],
-  //   queryFn: () => getSalesByCategory(outletId, dateRange),
+  // const { data: salesData, refetch: refetchSales } = useQuery({
+  //   ...getSalesDaily(outletId, format(dateRangeSales.from, 'yyyy-MM-dd'), format(dateRangeSales.to ?? dateRangeSales.from, 'yyyy-MM-dd')),
   // });
+
+
+
+
+  const { data: salesData, refetch: refetchSales } = useQuery({
+    ...getSalesDaily(
+      outletId,
+      format(dateRangeSales?.from, 'yyyy-MM-dd'),
+      format(dateRangeSales?.to, 'yyyy-MM-dd')
+    ),
+  });
 
   const handleDateRangeChange = (newRange: { from: Date; to: Date }) => {
     setDateRange(newRange);
   };
 
-  const [sortConfig, setSortConfig] = useState({
-    key: 'total_sales',
-    direction: 'desc'
-  });
-  const [monthlySortConfig, setMonthlySortConfig] = useState({
-    key: 'month',
-    direction: 'asc'
-  });
+  // const handleDateRangeSalesChange = (newRange: { from: Date; to: Date }) => {
+
+  //   if (!newRange) return;
+  //   const { from, to } = newRange;
+
+  //   if (from && to && from > to) {
+  //     setDateRangeSales({ from, to: from });
+  //   } else if (!to) {
+  //     setDateRangeSales({ from, to: from })
+  //   }
+
+  //   else {
+  //     setDateRangeSales(newRange);
+  //   }
+  //   refetchSales()
+  // };
+
+  // const handleDateRangeSalesChange = (newRange: { from: Date; to: Date }) => {
+  //   if (!newRange) return;
+
+  //   let { from, to } = newRange;
+
+  //   if (from && to && from > to) {
+  //     // If from is after to, swap them
+  //     [from, to] = [to, from];
+  //   }
+
+  //   setDateRangeSales({ from, to });
+  //   refetchSales();
+  // };
+
+  const handleDateRangeSalesChange = (newRange: { from?: Date; to?: Date }) => {
+    const { from, to } = newRange;
+
+    if (from && to && from > to) {
+      setDateRangeSales({ from, to: from });
+    }
+
+    refetchSales()
+  };
+
 
   useEffect(() => {
-    if (selectedOutletId) {
-      fetchProductsData();
-    } else if (selectedOutletId) {
-      handleStockChange();
+    if (productsData.length > 0) {
+      setFilteredMonthlyData(productsData);
     }
-  }, [selectedOutletId]);
-
-  // Mendapatkan bulan saat ini dalam format yang sesuai dengan monthOptions
-  const getCurrentMonth = () => {
-    const date = new Date();
-    const monthNames = [
-      "january", "february", "march", "april", "may", "june",
-      "july", "august", "september", "october", "november", "december"
-    ];
-    return monthNames[date.getMonth()];
-  };
-
-  // Menggunakan bulan saat ini sebagai nilai default
-  // const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
-  const [selectedMonth, setSelectedMonth] = useState<string>();
-  const handleShowDetail = (report: any) => {
-    setSelectedReport(report);
-    setIsDetailModalOpen(true);
-  };
-
+  }, [productsData]);
   const [inventoryData, setInventoryData] = useState({
     data: {
       products: [],
@@ -288,69 +214,51 @@ export default function ReportsPage() {
     }
   });
 
-  const getFormattedDateRange = (date: Date, type: string) => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
+  useEffect(() => {
+    setFilteredInventoryData(inventoryData.data.products)
+  }, [inventoryData])
 
-    switch (type) {
-      case "daily":
-        return format(date, "yyyy-MM-dd");
-      case "weekly":
-        // Mendapatkan tanggal awal dan akhir minggu
-        const startOfWeek = startOfWeek(date);
-        const endOfWeek = endOfWeek(date);
-        return `${format(startOfWeek, "yyyy-MM-dd")}/${format(endOfWeek, "yyyy-MM-dd")}`;
-      case "monthly":
-        return `${year}-${month.toString().padStart(2, '0')}`;
-      case "yearly":
-        return year.toString();
-      default:
-        return format(date, "yyyy-MM-dd");
-    }
+  useEffect(() => {
+    setFilteredCategoriesData(data?.data.categories || [])
+  }, [data])
+
+  useEffect(() => {
+    // setSearchTerm("");
+    setFilteredMonthlyData(productsData || []);
+    setFilteredInventoryData(inventoryData?.data?.products || []);
+    setFilteredCategoriesData(data?.data.categories || [])
+  }, [tab]);
+
+  const handleProductsSearch = (e: ChangeEvent<HTMLInputElement>) => {
+    const searchTerm = e.target.value.toLowerCase();
+
+    if (!productsData) return;
+    const filteredData = productsData.filter((prod) =>
+      prod.product_name.toLowerCase().includes(searchTerm)
+    );
+
+    const filteredInventory = inventoryData.data.products.filter((prod) => prod.product_name.toLowerCase().includes(searchTerm))
+    const filteredCategories = data?.data.categories.filter((prod) => prod.category_name.toLowerCase().includes(searchTerm))
+
+    setFilteredCategoriesData(filteredCategories)
+    setFilteredInventoryData(filteredInventory)
+    setFilteredMonthlyData(filteredData);
   };
 
-  const token = getCookie("access_token");
+  useEffect(() => {
+    if (selectedOutletId) {
+      fetchProductsData();
+    } else if (selectedOutletId) {
+      handleStockChange();
+    }
+  }, [selectedOutletId]);
 
-  // const currentOutlet = outlets.find(outlet => outlet.id === selectedOutletId);
+
+  const token = getCookie("access_token");
 
   const handleTabChange = (value: string) => {
     router.push(`/dashboard/reports?tab=${value}`);
   };
-
-  const getMonthName = (monthNumber) => {
-    const months = {
-      1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April',
-      5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus',
-      9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'
-    };
-    return months[monthNumber] || '';
-  };
-
-  type MonthOption = {
-    value: string;
-    label: string;
-    numeric: number;
-  };
-
-  const monthOptions: MonthOption[] = [
-    { value: "january", label: "Januari 2025", numeric: 1 },
-    { value: "february", label: "Februari 2025", numeric: 2 },
-    { value: "march", label: "Maret 2025", numeric: 3 },
-    { value: "april", label: "April 2025", numeric: 4 },
-    { value: "may", label: "Mei 2025", numeric: 5 },
-    { value: "june", label: "Juni 2025", numeric: 6 },
-    { value: "july", label: "Juli 2025", numeric: 7 },
-    { value: "august", label: "Agustus 2025", numeric: 8 },
-    { value: "september", label: "September 2025", numeric: 9 },
-    { value: "october", label: "Oktober 2025", numeric: 10 },
-    { value: "november", label: "November 2025", numeric: 11 },
-    { value: "december", label: "Desember 2025", numeric: 12 },
-  ];
-
-  // const handleShowDetail = (report: any) => {
-  //   setSelectedReport(report);
-  //   setIsDetailModalOpen(true);
-  // };
 
   // Print function for Stock tab
   const handlePrintStockReport = () => {
@@ -365,9 +273,6 @@ export default function ReportsPage() {
     const periodeText = inventoryData.data?.periode
       ? `${format(new Date(inventoryData.data.periode.start_date), 'dd/MM/yy')} - ${format(new Date(inventoryData.data.periode.end_date), 'dd/MM/yy')}`
       : format(selectedDate, 'dd/MM/yy', { locale: id });
-
-    // Use your actual Kifa Bakery logo base64 here
-    // const logoSrc = ""/>
 
 
     const printContent = `
@@ -554,21 +459,6 @@ export default function ReportsPage() {
     };
   };
 
-  // Helper function to generate chart image (you'll need to implement this)
-  const generateStockChartImage = async () => {
-    // Get the chart element (you'll need to add a ref to your chart)
-    const chartElement = document.querySelector('.recharts-wrapper');
-    if (!chartElement) return '';
-
-    try {
-      const canvas = await html2canvas(chartElement as HTMLElement);
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Failed to generate chart image:', error);
-      return '';
-    }
-  };
-
   function StatCard({ title, value, icon }) {
     return (
       <div className="border rounded-lg p-4">
@@ -591,8 +481,10 @@ export default function ReportsPage() {
       handlePrintCategoriesReport();
     } else if (tab === "dailySales") {
       handlePrintDailySalesReport();
+    } else if (tab === "perday") {
+      handlePrintDailySalesReport();
     } else if (tab === "realtime") {
-      handlePrintStockRealTimeReport();
+      handlePrintStockHistoryReport();
     } else if (tab === "productByMember") {
       handlePrintSalesMemberReport();
     } else if (tab === "approve") {
@@ -610,8 +502,10 @@ export default function ReportsPage() {
       handleExportCategoriesCSV();
     } else if (tab === "dailySales") {
       handleExportDailySalesCSV();
+    } else if (tab === "perday") {
+      handleExportDailySalesCSV();
     } else if (tab === "realtime") {
-      handleStokRealtimeExportCSV();
+      handleStokHistoryExportCSV();
     } else if (tab === "productByMember") {
       exportSalesMemberToCSV();
     } else if (tab === "approve") {
@@ -1344,6 +1238,8 @@ export default function ReportsPage() {
     printFrame.style.left = '-1000px';
     document.body.appendChild(printFrame);
 
+    const startDate = format(dateRangePerDay.from, 'dd MMMM yyyy', { locale: id });
+    const endDate = format(dateRangePerDay.to, 'dd MMMM yyyy', { locale: id });
     const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
     const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
     const reportDate = date ? format(date, 'dd MMMM yyyy', { locale: id }) : format(new Date(), 'dd MMMM yyyy', { locale: id });
@@ -1477,9 +1373,9 @@ export default function ReportsPage() {
                  class="logo">
           </div>
           <div class="header-content">
-            <div class="title">LAPORAN PENJUALAN HARIAN</div>
+            <div class="title">LAPORAN PENJUALAN</div>
             <div class="subtitle">Outlet: ${outletName}</div>
-            <div class="subtitle">Tanggal: ${reportDate}</div>
+            <div class="subtitle">Tanggal: ${startDate} - ${endDate}</div>
             <div class="date">Dicetak pada: ${currentDate}</div>
           </div>
         </div>
@@ -1487,33 +1383,33 @@ export default function ReportsPage() {
         <div class="summary-grid">
           <div class="summary-item">
             <div class="summary-label">Total Penjualan</div>
-            <div class="summary-value">Rp ${salesData?.data.summary.total_sales.toLocaleString()}</div>
+            <div class="summary-value">Rp ${transactionData?.data.total_revenue.toLocaleString()}</div>
           </div>
           <div class="summary-item">
             <div class="summary-label">Total Order</div>
-            <div class="summary-value">${salesData?.data.summary.total_orders}</div>
+            <div class="summary-value">${transactionData?.data.total_orders}</div>
           </div>
           <div class="summary-item">
             <div class="summary-label">Total Item</div>
-            <div class="summary-value">${salesData?.data.summary.total_items}</div>
+            <div class="summary-value">${transactionData?.data.total_items_sold}</div>
           </div>
           <div class="summary-item">
             <div class="summary-label">Rata-rata Order</div>
-            <div class="summary-value">Rp ${salesData?.data.summary.average_order_value.toLocaleString()}</div>
+            <div class="summary-value">Rp ${transactionData?.data.average_order_value}</div>
           </div>
         </div>
   
-        ${salesData?.data.orders.map((order, index) => `
+        ${transactionData?.data.orders.map((order, index) => `
           <div class="order-container ${index > 0 ? 'page-break' : ''}">
             <div class="order-header">
               <div>
                 <div class="summary-label">No Transaksi</div>
-                <div class="order-id">#${order.order_id}</div>
+                <div class="order-id">#${order.order_number}</div>
               </div>
               <div class="order-meta">
-                <div>${order.order_time}</div>
-                <div>Kasir: ${order.cashier}</div>
-                <div class="payment-badge">${order.payment_method === 'cash' ? 'Tunai' : 'Non-Tunai'}</div>
+                <div>${order.created_at}</div>
+                <div>Kasir: ${order.user}</div>
+                <div class="payment-badge">${order.payment_method === 'cash' ? 'Tunai' : order.payment_method === 'transfer' ? 'Transfer' : 'Qris'}</div>
               </div>
               <div class="order-total">
                 Rp ${order.total.toLocaleString()}
@@ -1533,12 +1429,12 @@ export default function ReportsPage() {
               <tbody>
                 ${order.items ? order.items.map(item => `
                   <tr>
-                    <td>${item.product_name}</td>
+                    <td>${item.product}</td>
                     <td>${item.sku || '-'}</td>
-                    <td class="text-right">Rp ${item.unit_price.toLocaleString()}</td>
+                    <td class="text-right">Rp ${item.price.toLocaleString()}</td>
                     <td class="text-right">${item.quantity}</td>
                     <td class="text-left">${item.unit}</td>
-                    <td class="text-right">Rp ${(item.unit_price * item.quantity).toLocaleString()}</td>
+                    <td class="text-right">Rp ${(Number(item.price) * item.quantity).toLocaleString()}</td>
                   </tr>
                 `).join('') : `
                   <tr>
@@ -1592,7 +1488,7 @@ export default function ReportsPage() {
   //export penjualan harian
   const handleExportDailySalesCSV = () => {
     // Verifikasi bahwa data penjualan tersedia
-    if (!salesData || !salesData.data || !salesData.data.orders) {
+    if (!transactionData || !transactionData.data || !transactionData.data.orders) {
       console.error('Data penjualan tidak tersedia untuk di-export');
       // toast.error('Data penjualan tidak tersedia untuk di-export');
       return;
@@ -1603,8 +1499,8 @@ export default function ReportsPage() {
       let csvContent = 'Order ID,Tanggal,Waktu,Kasir,Metode Pembayaran,Produk,SKU,Harga,Kuantitas,Subtotal,Total Order\n';
 
       // Data untuk File CSV
-      salesData.data.orders.forEach(order => {
-        const orderDate = order.order_time.split(' ')[0]; // Mengasumsikan format "YYYY-MM-DD HH:MM:SS"
+      transactionData.data.orders.forEach(order => {
+        const orderDate = order.created_at.split(' ')[0]; // Mengasumsikan format "YYYY-MM-DD HH:MM:SS"
         // const orderTime = order.order_time.split(' ')[1];
         const paymentMethod = order.payment_method === 'cash' ? 'Tunai' : 'Non-Tunai';
 
@@ -1612,30 +1508,30 @@ export default function ReportsPage() {
         if (order.items && order.items.length > 0) {
           order.items.forEach((item, index) => {
             // Ganti koma dengan titik koma untuk menghindari konflik dengan format CSV
-            const productName = item.product_name.replace(/,/g, ';');
+            const productName = item.product.replace(/,/g, ';');
             const productSKU = (item.sku || '-').replace(/,/g, ';');
-            const price = item.unit_price;
+            const price = item.price;
             const quantity = item.quantity;
-            const subtotal = item.unit_price * item.quantity;
+            const subtotal = Number(item.price) * item.quantity;
 
             // Hanya tambahkan total order pada baris pertama dari setiap order
             const totalOrder = index === 0 ? order.total : '';
 
             // Baris CSV untuk setiap item
-            csvContent += `"${order.order_id}","${orderDate}","${order.cashier}","${paymentMethod}","${productName}","${productSKU}",${price},${quantity},${subtotal},${totalOrder}\n`;
+            csvContent += `"${order.order_number}","${orderDate}","${order.user}","${paymentMethod}","${productName}","${productSKU}",${price},${quantity},${subtotal},${totalOrder}\n`;
           });
         } else {
           // Jika tidak ada detail item, tambahkan baris dengan order info saja
-          csvContent += `"${order.order_id}","${orderDate}","${orderTime}","${order.cashier}","${paymentMethod}","","","","","",${order.total}\n`;
+          csvContent += `"${order.order_number}","${orderDate}","${order.created_at}","${order.user.name}","${paymentMethod}","","","","","",${order.total}\n`;
         }
       });
 
       // Tambahkan baris ringkasan penjualan
       csvContent += `\n"RINGKASAN PENJUALAN"\n`;
-      csvContent += `"Total Penjualan",${salesData.data.summary.total_sales}\n`;
-      csvContent += `"Total Order",${salesData.data.summary.total_orders}\n`;
-      csvContent += `"Total Item",${salesData.data.summary.total_items}\n`;
-      csvContent += `"Rata-rata Order",${salesData.data.summary.average_order_value}\n`;
+      csvContent += `"Total Penjualan",${transactionData.data.total_revenue}\n`;
+      csvContent += `"Total Order",${transactionData.data.total_orders}\n`;
+      csvContent += `"Total Item",${transactionData.data.total_items_sold}\n`;
+      csvContent += `"Rata-rata Order",${transactionData.data.average_order_value}\n`;
 
       // Buat Blob dari CSV content
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1682,8 +1578,6 @@ export default function ReportsPage() {
     dateRangeApprove?.from ? format(dateRangeApprove.from, 'yyyy-MM-dd') : '',
     dateRangeApprove?.to ? format(dateRangeApprove.to, 'yyyy-MM-dd') : ''
   )
-
-  console.log({ reportsData })
 
   // Pastikan struktur data default
   const reports = {
@@ -1974,11 +1868,20 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
-  const queryStock = getRealtimeStock(currentOutlet?.id || 1)
-  const { data: stockData } = queryStock()
+  // const queryStock = getRealtimeStock(currentOutlet?.id || 1)
+  // const { data: stockData } = queryStock()
 
-  //print stok realtime
-  const handlePrintStockRealTimeReport = () => {
+  const queryHistoryStock = getInventoryHistoryByType({
+    outletId: currentOutlet?.id || 1,
+    dateRange: {
+      start_date: format(dateRangeRealtime.from, 'yyyy-MM-dd'),
+      end_date: format(dateRangeRealtime.to, 'yyyy-MM-dd'),
+    },
+  })
+  const { data: historyStockData, refetch } = queryHistoryStock()
+
+  //print stok history
+  const handlePrintStockHistoryReport = () => {
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'absolute';
     printFrame.style.top = '-1000px';
@@ -1987,190 +1890,216 @@ export default function ReportsPage() {
 
     const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: id });
     const outletName = currentOutlet ? currentOutlet.name : 'Semua Outlet';
+    const startDate = format(dateRangeRealtime.from, 'dd MMMM yyyy', { locale: id });
+    const endDate = format(dateRangeRealtime.to, 'dd MMMM yyyy', { locale: id });
 
     // Kelompokkan stok berdasarkan jenis
-    const groupedStock = stockData?.data.reduce((acc, product) => {
-      product.stock_by_type?.forEach(stock => {
-        if (!acc[stock.type]) {
-          acc[stock.type] = {
-            name: stock.type === 'purchase' ? 'Pembelian' :
-              stock.type === 'sale' ? 'Penjualan' :
-                stock.type === 'adjustment' ? 'Penyesuaian' :
-                  stock.type === 'other' ? 'Lainya' :
-                    stock.type === 'shipment' ? 'Pengiriman' :
-                      stock.type === 'transfer_in' ? 'Transfer Masuk' :
-                        stock.type === 'transfer_out' ? 'Transfer Keluar' :
-                          'Stock Opname',
-            products: []
-          };
-        }
-        acc[stock.type].products.push({
-          product,
-          stock
-        });
-      });
-      return acc;
-    }, {});
+    const groupedStock = {
+      purchase: {
+        name: 'Pembelian',
+        products: historyStockData?.data.summary_by_type.purchase?.products || []
+      },
+      sale: {
+        name: 'Penjualan',
+        products: historyStockData?.data.summary_by_type.sale?.products || []
+      },
+      adjustment: {
+        name: 'Penyesuaian',
+        products: historyStockData?.data.summary_by_type.adjustment?.products || []
+      },
+      shipment: {
+        name: 'Pengiriman',
+        products: historyStockData?.data.summary_by_type.shipment?.products || []
+      }
+    };
 
     const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Laporan Stok Realtime</title>
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            padding: 20px; 
-            color: #333; 
-            font-size: 14px;
-          }
-          .header { 
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-          }
-          .logo-container {
-            width: 70px;
-            margin-right: 15px;
-          }
-          .logo {
-            width: 100%;
-            height: auto;
-          }
-          .title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          .subtitle {
-            font-size: 13px;
-            color: #555;
-          }
-          .date {
-            font-size: 12px;
-            color: #777;
-            margin-top: 10px;
-          }
-          .stock-group {
-            margin-bottom: 30px;
-            page-break-inside: avoid;
-          }
-          .group-title {
-            font-weight: bold;
-            font-size: 15px;
-            margin: 15px 0 10px 0;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #eee;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-          }
-          th, td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-          }
-          th {
-            background-color:rgb(255, 255, 255);
-            font-weight: bold;
-          }
-          .text-right { text-align: right; }
-          .text-center { text-align: center; }
-          .badge {
-            display: inline-block;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            border: 1px solid #ddd;
-          }
-          .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-          }
-          @media print {
-            body { padding: 15px; }
-            .stock-group { page-break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo-container">
-            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png"
-                 alt="Logo Kifa"
-                 class="logo">
-          </div>
-          <div class="header-content">
-            <div class="title">LAPORAN STOK REAL TIME</div>
-            <div class="subtitle">Outlet: ${outletName}</div>
-            <div class="date">Dicetak pada: ${currentDate}</div>
-          </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Laporan Histori Stok</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          padding: 20px; 
+          color: #333; 
+          font-size: 14px;
+        }
+        .header { 
+          display: flex;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid #ddd;
+        }
+        .logo-container {
+          width: 70px;
+          margin-right: 15px;
+        }
+        .logo {
+          width: 100%;
+          height: auto;
+        }
+        .title {
+          font-size: 18px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        .subtitle {
+          font-size: 13px;
+          color: #555;
+        }
+        .date {
+          font-size: 12px;
+          color: #777;
+          margin-top: 10px;
+        }
+        .period {
+          font-size: 13px;
+          margin-bottom: 15px;
+        }
+        .stock-group {
+          margin-bottom: 30px;
+          page-break-inside: avoid;
+        }
+        .group-title {
+          font-weight: bold;
+          font-size: 15px;
+          margin: 15px 0 10px 0;
+          padding-bottom: 5px;
+          border-bottom: 1px solid #eee;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 10px;
+        }
+        th, td {
+          padding: 8px;
+          text-align: left;
+          border-bottom: 1px solid #ddd;
+        }
+        th {
+          background-color:rgb(255, 255, 255);
+          font-weight: bold;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .badge {
+          display: inline-block;
+          padding: 3px 6px;
+          border-radius: 4px;
+          font-size: 12px;
+          border: 1px solid #ddd;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 15px;
+          border-top: 1px solid #eee;
+          font-size: 12px;
+          color: #666;
+          text-align: center;
+        }
+        @media print {
+          body { padding: 15px; }
+          .stock-group { page-break-inside: avoid; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-container">
+          <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg0JeOFanmAshWgLBlxIH5qHVyx7okwwmeV9Wbqr9n8Aie9Gh-BqnAF0_PlfBa_ZHqnENEOz8MuPZxFYFfgvCAYF8ie3AMRW_syA0dluwZJW-jg7ZuS8aaRJ38NI2f7UFW1ePVO4kifJTbdZi0WvQFr77GyqssJzeWL2K65GPB4dZwHEkZnlab9qNKX9VSZ/s320/logo-kifa.png"
+               alt="Logo Kifa"
+               class="logo">
         </div>
-  
-        ${groupedStock ? Object.entries(groupedStock).map(([type, group]) => `
-          <div class="stock-group">
-            <div class="group-title">
-              ${group.name} (${group.products.length} produk)
-            </div>
-            <table>
-              <thead>
+        <div class="header-content">
+          <div class="title">LAPORAN HISTORI STOK</div>
+          <div class="subtitle">Outlet: ${outletName}</div>
+          <div class="period">Periode: ${startDate} - ${endDate}</div>
+          <div class="date">Dicetak pada: ${currentDate}</div>
+        </div>
+      </div>
+
+      ${Object.entries(groupedStock).map(([type, group]) => `
+        <div class="stock-group">
+          <div class="group-title">
+            ${group.name} (${group.products.length} produk)
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Produk</th>
+                <th>SKU</th>
+                <th>Stok Akhir</th>
+                <th class="text-right">Total Perubahan</th>
+                <th class="text-right">Total Transaksi</th>
+                <th>Detail Transaksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.products.map(product => `
                 <tr>
-                  <th>Produk</th>
-                  <th>Kategori</th>
-                  <th class="text-right">Stok</th>
-                  <th class="text-right">Perubahan</th>
-                  <th>Status</th>
-                  <th>Tanggal</th>
+                  <td>
+                    <div>${product.product_name}</div>
+                  </td>
+                  <td>${product.sku}</td>
+                  <td>${product.stock_as_of_end_date} ${product.unit}</td>
+                  <td class="text-right">
+                    <span style="color:${product.total_quantity_changed > 0 ? 'green' : 'red'}">
+                      ${product.total_quantity_changed > 0 ? '+' : ''}${product.total_quantity_changed}
+                    </span>
+                  </td>
+                  <td class="text-right">${product.total_entries}</td>
+                  <td>
+                    <table style="margin: 5px 0; background: #f9f9f9;">
+                      <thead>
+                        <tr>
+                          <th style="padding: 3px;">Tanggal</th>
+                          <th style="padding: 3px; text-align: right;">Sebelum</th>
+                          <th style="padding: 3px; text-align: right;">Perubahan</th>
+                          <th style="padding: 3px; text-align: right;">Sesudah</th>
+                          <th style="padding: 3px;">Catatan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${product.entries.map(entry => `
+                          <tr>
+                            <td style="padding: 3px;">${format(new Date(entry.created_at), "dd MMM yy", { locale: id })}</td>
+                            <td style="padding: 3px; text-align: right;">${entry.quantity_before}</td>
+                            <td style="padding: 3px; text-align: right; color:${entry.quantity_change > 0 ? 'green' : 'red'}">
+                              ${entry.quantity_change > 0 ? '+' : ''}${entry.quantity_change}
+                            </td>
+                            <td style="padding: 3px; text-align: right;">${entry.quantity_after}</td>
+                            <td style="padding: 3px;">${entry.notes || '-'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                ${group.products.map(({ product, stock }) => `
-                  <tr>
-                    <td>
-                      <div>${product.product.name}</div>
-                      <div style="font-size:12px;color:#666;">${product.product.sku}</div>
-                    </td>
-                    <td>${product.product.category.name}</td>
-                    <td class="text-right">
-                      ${product.quantity} ${product.product.unit}
-                    </td>
-                    <td class="text-right">
-                      <span style="color:${stock.quantity_change > 0 ? 'green' : 'red'}">
-                        ${stock.quantity_change > 0 ? '+' : ''}${stock.quantity_change}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="badge">
-                        ${stock.status === 'approved' ? 'Disetujui' : 'Pending'}
-                      </span>
-                    </td>
-                    <td>${format(new Date(stock.created_at), "dd MMM yy", { locale: id })}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `).join('') : `
-          <div class="text-center" style="margin:30px 0;color:#666;">
-            Tidak ada data stok yang tersedia
-          </div>
-        `}
-  
-        <div class="footer">
-          <p>Laporan ini dibuat secara otomatis oleh sistem</p>
-          <p>© ${new Date().getFullYear()} Kifa Bakery</p>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
-      </body>
-      </html>
-    `;
+      `).join('')}
+
+      ${(!historyStockData?.data.summary_by_type.purchase.products.length &&
+        !historyStockData?.data.summary_by_type.sale.products.length &&
+        !historyStockData?.data.summary_by_type.adjustment.products.length &&
+        !historyStockData?.data.summary_by_type.shipment.products.length) ? `
+        <div class="text-center" style="margin:30px 0;color:#666;">
+          Tidak ada data stok yang tersedia
+        </div>
+      ` : ''}
+
+      <div class="footer">
+        <p>Laporan ini dibuat secara otomatis oleh sistem</p>
+        <p>© ${new Date().getFullYear()} Kifa Bakery</p>
+      </div>
+    </body>
+    </html>
+  `;
 
     const frameDoc = printFrame.contentWindow.document;
     frameDoc.open();
@@ -2188,72 +2117,88 @@ export default function ReportsPage() {
     };
   };
 
-  //export stok realtime
-  const handleStokRealtimeExportCSV = () => {
+  //export stok history
+  const handleStokHistoryExportCSV = () => {
     // Jika tidak ada data, tampilkan alert
-    if (!stockData?.data || stockData.data.length === 0) {
+    if (!historyStockData?.data ||
+      (!historyStockData.data.summary_by_type.purchase.products.length &&
+        !historyStockData.data.summary_by_type.sale.products.length &&
+        !historyStockData.data.summary_by_type.adjustment.products.length &&
+        !historyStockData.data.summary_by_type.shipment.products.length)) {
       alert('Tidak ada data stok untuk diekspor');
       return;
     }
 
     // Header CSV
     const headers = [
+      'Jenis Transaksi',
       'Nama Produk',
       'SKU',
-      'Kategori',
-      'Stok Saat Ini',
+      'Stok Akhir Periode',
       'Satuan',
-      'Minimal Stok',
-      'Status Stok',
-      'Jenis Transaksi Terakhir',
+      'Total Perubahan Stok',
+      'Jumlah Transaksi',
+      'Tanggal Transaksi',
+      'Stok Sebelum',
       'Perubahan Stok',
-      'Stok Setelah',
-      'Status Transaksi',
+      'Stok Sesudah',
       'Catatan',
-      'Tanggal Update',
       'Outlet'
     ];
 
     // Data CSV
-    const csvData = stockData.data.map(item => {
-      // Ambil transaksi terakhir jika ada
-      const lastTransaction = item.stock_by_type?.[0] || {};
+    const csvData = [];
 
-      // Tentukan status stok
-      let stockStatus = '';
-      if (item.quantity >= item.min_stock) {
-        stockStatus = 'Normal';
-      } else if (item.quantity < item.min_stock && item.quantity > 0) {
-        stockStatus = 'Rendah';
-      } else {
-        stockStatus = 'Habis';
-      }
+    // Loop melalui semua jenis transaksi
+    const transactionTypes = [
+      { type: 'purchase', name: 'Pembelian' },
+      { type: 'sale', name: 'Penjualan' },
+      { type: 'adjustment', name: 'Penyesuaian' },
+      { type: 'shipment', name: 'Pengiriman' }
+    ];
 
-      // Tentukan jenis transaksi
-      const transactionType = lastTransaction.type ?
-        lastTransaction.type === 'purchase' ? 'Pembelian' :
-          lastTransaction.type === 'sale' ? 'Penjualan' :
-            lastTransaction.type === 'adjustment' ? 'Penyesuaian' :
-              lastTransaction.type === 'transfer_in' ? 'Transfer Masuk' :
-                lastTransaction.type === 'transfer_out' ? 'Transfer Keluar' :
-                  'Stock Opname' : '-';
+    transactionTypes.forEach(({ type, name }) => {
+      const products = historyStockData.data.summary_by_type[type]?.products || [];
 
-      return [
-        `"${item.product.name}"`, // Gunakan quotes untuk handle koma dalam nama produk
-        `"${item.product.sku}"`,
-        `"${item.product.category.name}"`,
-        item.quantity,
-        `"${item.product.unit}"`,
-        item.min_stock,
-        stockStatus,
-        transactionType,
-        lastTransaction.quantity_change || 0,
-        lastTransaction.quantity_after || item.quantity,
-        lastTransaction.status === 'approved' ? 'Disetujui' : (lastTransaction.status || '-'),
-        `"${lastTransaction.notes || '-'}"`,
-        format(new Date(item.updated_at), "dd MMM yyyy HH:mm", { locale: id }),
-        `"${currentOutlet?.name || 'Semua Outlet'}"`
-      ];
+      products.forEach(product => {
+        // Jika ada entri, buat baris untuk setiap entri
+        if (product.entries && product.entries.length > 0) {
+          product.entries.forEach(entry => {
+            csvData.push([
+              name,
+              `"${product.product_name}"`,
+              `"${product.sku}"`,
+              product.stock_as_of_end_date,
+              `"${product.unit}"`,
+              product.total_quantity_changed,
+              product.total_entries,
+              format(new Date(entry.created_at), "dd MMM yyyy HH:mm", { locale: id }),
+              entry.quantity_before,
+              entry.quantity_change,
+              entry.quantity_after,
+              `"${entry.notes || '-'}"`,
+              `"${currentOutlet?.name || 'Semua Outlet'}"`
+            ]);
+          });
+        } else {
+          // Jika tidak ada entri, buat baris untuk produk saja
+          csvData.push([
+            name,
+            `"${product.product_name}"`,
+            `"${product.sku}"`,
+            product.stock_as_of_end_date,
+            `"${product.unit}"`,
+            product.total_quantity_changed,
+            product.total_entries,
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            `"${currentOutlet?.name || 'Semua Outlet'}"`
+          ]);
+        }
+      });
     });
 
     // Gabungkan header dan data
@@ -2269,7 +2214,7 @@ export default function ReportsPage() {
     link.href = url;
     link.setAttribute(
       'download',
-      `Laporan_Stok_RealTime_${currentOutlet?.name || 'Semua_Outlet'}_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`
+      `Laporan_Histori_Stok_${currentOutlet?.name || 'Semua_Outlet'}_${format(dateRangeRealtime.from, 'yyyyMMdd')}_${format(dateRangeRealtime.to, 'yyyyMMdd')}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -2672,70 +2617,6 @@ export default function ReportsPage() {
     }
   };
 
-
-
-
-  // penjualan
-  // useEffect(() => {
-  //   const fetchMonthlySales = async () => {
-  //     setIsLoading(true);
-  //     setError(null);
-
-  //     try {
-  //       const outletParam = selectedOutletId || '1';
-
-  //       const response = await fetch(`http://127.0.0.1:8000/api/reports/monthly-sales/${outletParam}`, {
-  //         headers: {
-  //           'Accept': 'application/json',
-  //           'Authorization': 'Bearer ' + token,
-  //         },
-  //       });
-
-  //       if (!response.ok) {
-  //         throw new Error(`HTTP error! status: ${response.status}`);
-  //       }
-
-  //       const result = await response.json();
-
-  //       // Check if result and data exist
-  //       if (!result?.data) {
-  //         throw new Error("Invalid data structure");
-  //       }
-
-  //       const { data } = result;
-
-  //       // Extract summary data with default values if not present
-  //       const summary = data.summary || {
-  //         total_sales: "0.00",
-  //         total_transactions: 0,
-  //         average_transaction: "0.00",
-  //         report_date: null
-  //       };
-
-  //       // Format the data
-  //       const formattedData = [{
-  //         id: `${data.year}-${data.month}`,
-  //         month: getMonthName(data.month),
-  //         year: data.year,
-  //         totalTransactions: summary.total_transactions,
-  //         totalSales: parseFloat(summary.total_sales),
-  //         avgTicket: parseFloat(summary.average_transaction),
-  //         outlet: data.outlet || 'Outlet tidak tersedia'
-  //       }];
-
-  //       setMonthlyReportsData(formattedData);
-
-  //     } catch (err) {
-  //       console.error("Fetch error:", err);
-  //       setError(err.message || "Gagal memuat data penjualan");
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   fetchMonthlySales();
-  // }, [selectedOutletId, token]); // Tambahkan token jika diperlukan
-
   const fetchProductsData = async () => {
     if (!selectedOutletId) return;
 
@@ -2784,27 +2665,6 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // const handleShowDetail = (product) => {
-  //   // Implement detail view functionality
-  //   console.log('Show product detail:', product);
-  // };
-
-  const handleSort = (key) => {
-    const direction = sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc';
-    setSortConfig({ key, direction });
-
-    // Sort the data
-    const sortedData = [...productsData].sort((a, b) => {
-      if (direction === 'asc') {
-        return a[key] > b[key] ? 1 : -1;
-      } else {
-        return a[key] < b[key] ? 1 : -1;
-      }
-    });
-
-    setProductsData(sortedData);
   };
 
   const handleStockChange = async () => {
@@ -2897,26 +2757,12 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  // useEffect(() => {
-  //   if (selectedMonth && tab === "stock") {
-  //     handleStockChange(selectedMonth);
-  //   }
-  // }, [selectedMonth, selectedOutletId, tab]);
-
-  const handleMonthChange = async (newMonth: string) => {
-    if (tab === "stock") {
-      // Existing monthly report logic
-      handleStockChange(newMonth);
-    }
-  };
-
-
-  Date.prototype.getWeek = function () {
-    const firstDayOfYear = new Date(this.getFullYear(), 0, 1);
-    return Math.ceil((((this - firstDayOfYear) / 86400000) + firstDayOfYear.getDay() + 1) / 7);
-  };
+  // Date.prototype.getWeek = function () {
+  //   const firstDayOfYear = new Date(this.getFullYear(), 0, 1);
+  //   return Math.ceil((((this - firstDayOfYear) / 86400000) + firstDayOfYear.getDay() + 1) / 7);
+  // };
 
   return (
     <div className="flex flex-col space-y-4">
@@ -2950,157 +2796,6 @@ export default function ReportsPage() {
       )}
 
       <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
-        {/* <VisuallyHidden>
-          <TabsList className="mb-4 grid w-full grid-cols-5 bg-muted">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="sales">Penjualan</TabsTrigger>
-            <TabsTrigger value="stock">Stok</TabsTrigger>
-            <TabsTrigger value="monthly">Laporan Bulanan</TabsTrigger>
-            <TabsTrigger value="outlets">Perbandingan Outlet</TabsTrigger>
-          </TabsList>
-        </VisuallyHidden> */}
-
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Penjualan (Maret)
-                </CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">Rp 170.000.000</div>
-                <p className="text-xs text-muted-foreground">
-                  +21.4% dari bulan lalu
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Transaksi (Maret)
-                </CardTitle>
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3,400</div>
-                <p className="text-xs text-muted-foreground">
-                  +21.4% dari bulan lalu
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Rata-rata Transaksi
-                </CardTitle>
-                <Receipt className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">Rp 50.000</div>
-                <p className="text-xs text-muted-foreground">
-                  +0.0% dari bulan lalu
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Produk Terjual
-                </CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">12,234</div>
-                <p className="text-xs text-muted-foreground">
-                  +19% dari bulan lalu
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
-              <CardHeader>
-                <CardTitle>Tren Penjualan</CardTitle>
-                <CardDescription>
-                  Penjualan bulanan selama 12 bulan terakhir
-                  {selectedOutletId !== "all" &&
-                    currentOutlet &&
-                    ` untuk ${currentOutlet.name}`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pl-2">
-                <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={salesData}>
-                    <XAxis
-                      dataKey="name"
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `Rp ${value / 1000000}jt`}
-                    />
-                    <Bar
-                      dataKey="total"
-                      fill="currentColor"
-                      radius={[4, 4, 0, 0]}
-                      className="fill-primary"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>Produk Terlaris</CardTitle>
-                <CardDescription>
-                  Top 5 produk dengan penjualan tertinggi
-                  {selectedOutletId !== "all" &&
-                    currentOutlet &&
-                    ` di ${currentOutlet.name}`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produk</TableHead>
-                      <TableHead className="text-right">Terjual</TableHead>
-                      <TableHead className="text-right">Pendapatan</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topProductsData.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {product.category}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {product.sales}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          Rp {product.revenue.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
         <TabsContent value="dailySales" className="space-y-4">
           <Card>
             <CardHeader>
@@ -3115,45 +2810,11 @@ export default function ReportsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
                 <div className="grid grid-cols-2 gap-4">
-                  {/* <div>
-                    <Select defaultValue="daily">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih Periode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Harian</SelectItem>
-                        <SelectItem value="weekly">Mingguan</SelectItem>
-                        <SelectItem value="monthly">Bulanan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div> */}
-                  <div>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        {/* <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? (
-                            format(date, "MMMM yyyy", { locale: id })
-                          ) : (
-                            <span>Pilih bulan</span>
-                          )}
-                        </Button> */}
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={(newDate) => newDate && setDate(newDate)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  {/* <DateRangePicker onChange={ } value={ } /> */}
+                  <DateRangePicker
+                    value={dateRangeSales}
+                    onChange={handleDateRangeSalesChange}
+                  />
                 </div>
               </div>
 
@@ -3331,6 +2992,8 @@ export default function ReportsPage() {
                       />
                     </div>
 
+                    <Input placeholder="Cari Produk" className="w-80 mb-4" onChange={handleProductsSearch} />
+
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -3345,7 +3008,7 @@ export default function ReportsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {inventoryData?.data?.products?.map((product) => (
+                        {filteredInventoryData.map((product) => (
                           <TableRow key={product.product_id}>
                             <TableCell>
                               <div className="font-medium">{product.product_name}</div>
@@ -3496,6 +3159,8 @@ export default function ReportsPage() {
                       </Card>
                     </div>
                   )}
+
+                  <Input placeholder="Cari Produk" className="w-80 mb-4" onChange={handleProductsSearch} />
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -3510,7 +3175,7 @@ export default function ReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {productsData.map((product, index) => (
+                      {filteredMonthlyData.map((product, index) => (
                         <TableRow key={product.id || index}>
                           <TableCell>{product.sku}</TableCell>
                           <TableCell>{product.product_name}</TableCell>
@@ -3608,9 +3273,10 @@ export default function ReportsPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                  <Input placeholder="Cari Kategori" className="w-80 mb-4" onChange={handleProductsSearch} />
 
                   <div className="space-y-6">
-                    {data.data.categories.map((category) => (
+                    {filteredCategoriesData?.map((category) => (
                       <div key={category.category_id} className="border rounded-lg">
                         <div className="p-4 bg-gray-50 flex justify-between items-center">
                           <div>
@@ -3628,6 +3294,7 @@ export default function ReportsPage() {
                             </p>
                           </div>
                         </div>
+
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -3692,7 +3359,9 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
-        {tab === 'realtime' && <RealtimeStock />}
+        {tab === 'perday' && <PerDay dateRange={dateRangePerDay} setDateRange={setDateRangePerDay} />}
+
+        {tab === 'realtime' && <RealtimeStock dateRange={dateRangeRealtime} setDateRange={setDateRangeRealtime} />}
 
         {tab === 'approve' && <ApprovalReport date={dateRangeApprove} setDate={setDateRangeApprove} />}
 

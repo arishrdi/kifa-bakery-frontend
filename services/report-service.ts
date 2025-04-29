@@ -23,6 +23,7 @@ import { getAuthToken } from '@/services/auth-service';
 import { DashboardResponse } from "@/types/dashboard";
 import { GetInventoryByDateResponse, RealtimeStockResponse, SalesDataDaily } from "@/types/report";
 import { getCookie } from "cookies-next";
+import { HistoryStockResponse } from "@/types/history-stock";
 
 interface DashboardReportResponse {
   outlet: string
@@ -185,9 +186,33 @@ const fetchApi: QueryFunction = async ({ queryKey }) => {
   return response.json();
 };
 
-export const getRealtimeStock = (outletId: number) => {
-  return createQueryHook<RealtimeStockResponse>(`/inventory-histories/stock/${outletId}`, ['realtime-stock']);
+export const getRealtimeStock = (params: {
+  outletId: number,
+  dateRange: {
+    start_date: string;
+    end_date: string;
+  }
+}) => {
+  const startDate = params.dateRange?.start_date;
+  const endDate = params.dateRange?.end_date ?? startDate;
+  return createQueryHook<RealtimeStockResponse>(`/inventory-histories/stock/${params.outletId}?start_date=${startDate}&end_date=${endDate}`, ['realtime-stock']);
 };
+
+export const getInventoryHistoryByType = (params: {
+  outletId: number,
+  dateRange: {
+    start_date: string;
+    end_date: string;
+  }
+}) => {
+  const startDate = params.dateRange?.start_date;
+  const endDate = params.dateRange?.end_date ?? startDate;
+  return createQueryHook<HistoryStockResponse>(`/inventory-histories/type/${params.outletId}?start_date=${startDate}&end_date=${endDate}`, ['realtime-stock']);
+};
+
+// export const getInventoryHistoryByType = (outletId: string, dateFrom: string, dateTo: string) => {
+//   return createQueryHook<HistoryStockResponse>(`/inventory-histories/type/${outletId}?=${date}`, ['inventory-by-date', date, outletId.toString()])();
+// }
 
 export const getInventoryByDate = (outletId: number, date: string) => {
   return createQueryHook<GetInventoryByDateResponse>(`/reports/inventory-by-date/${outletId}?date=${date}`, ['inventory-by-date', date, outletId.toString()])();
@@ -256,15 +281,10 @@ export const getSalesByCategory = (outletId: number, dateRange: DateRange) => {
   };
 };
 
-
-// export const getSalesDaily = (outletId: number, date: string) => {
-//   return createQueryHook<SalesDataDaily>(`/reports/daily-sales/${outletId}`, ['daily-sales', outletId.toString()])();
-// };
-
-export const getSalesDaily = (outletId: number) => ({
+export const getSalesDaily = (outletId: number,  startDate: string, endDate: string) => ({
   queryKey: ['daily-sales', outletId.toString()],
   queryFn: async () => {
-    const response = await fetch(`${BASE_URL}/reports/daily-sales/${outletId}`, {
+    const response = await fetch(`${BASE_URL}/reports/daily-sales/${outletId}?start_date=${startDate}&end_date=${endDate}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

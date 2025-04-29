@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Search, Plus, Edit, Trash2, Store, Cake, MoreHorizontal } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Store, Cake, MoreHorizontal, Printer, Download } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useSearchParams } from "next/navigation"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -27,6 +27,8 @@ import { InventoryInput } from "@/types/inventory"
 import { toast } from "@/hooks/use-toast"
 import { DataTable } from "../ui/data-table"
 import { columns } from "./column"
+import printPdfHandler from "./printPdf"
+import { exportCsvHandler } from "./exportCsvHandler"
 
 export default function ProductsContent() {
   const { currentOutlet } = useOutlet()
@@ -253,38 +255,6 @@ export default function ProductsContent() {
     setIsEditProductOpen(true);
   };
 
-  const handleAdjustStockSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    postInventoryHistory.mutate(
-      {
-        outlet_id: currentOutlet?.id || 0,
-        product_id: selectedProduct.id,
-        quantity_change: inventoryFormData.quantity_change,
-        type: inventoryFormData.type,
-        notes: inventoryFormData.notes
-      },
-      {
-        onSuccess: () => {
-          setIsAdjustStockDialogOpen(false)
-          setInventoryFormData(initialInventoryFormData)
-          refetchProducts()
-          toast({
-            title: "Stok Berhasil Disesuaikan!",
-            description: "Perubahan stok telah berhasil disimpan.",
-            variant: "default"
-          })
-        },
-        onError: () => {
-          toast({
-            title: "Gagal Menyesuaikan Stok!",
-            description: "Terjadi kesalahan saat mencoba menyesuaikan stok.",
-            variant: "destructive"
-          })
-        }
-      }
-    )
-  }
-
   const handleDeleteClick = (product: Product) => {
     setSelectedProduct(product)
     setIsDeleteDialogOpen(true)
@@ -313,13 +283,28 @@ export default function ProductsContent() {
     });
   }
 
-  const handleAdjustStockClick = (product: Product) => {
-    setSelectedProduct(product)
-    setInventoryFormData({
-      ...initialInventoryFormData,
-      product_id: product.id
-    })
-    setIsAdjustStockDialogOpen(true)
+  const handlePrint = () => {
+    if (products?.data && currentOutlet) {
+      printPdfHandler(products?.data, currentOutlet)
+    } else {
+      toast({
+        title: "Produk kosong!",
+        description: "Terjadi kesalahan saat mencetak produk.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleExport = () => {
+    if (products?.data && currentOutlet) {
+      exportCsvHandler(products?.data, currentOutlet)
+    } else {
+      toast({
+        title: "Produk kosong!",
+        description: "Terjadi kesalahan saat mencetak produk.",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
@@ -588,15 +573,30 @@ export default function ProductsContent() {
       </div>
 
       {currentOutlet && (
-        <Alert>
-          <Store className="h-4 w-4" />
-          <AlertTitle>Menampilkan produk untuk: {currentOutlet.name}</AlertTitle>
-          <AlertDescription>Data produk yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
+        <Alert className="flex flex-row items-center">
+          <div className="flex gap-2">
+            <Store className="h-4 w-4" />
+            <div>
+
+              <AlertTitle>Outlet Aktif: {currentOutlet.name}</AlertTitle>
+              <AlertDescription>Data yang ditampilkan adalah untuk outlet {currentOutlet.name}.</AlertDescription>
+            </div>
+          </div>
+
+          <div className="ml-auto space-x-2">
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="mr-2 h-4 w-4" />
+              Cetak
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Ekspor
+            </Button>
+          </div>
         </Alert>
       )}
       <Card>
         <CardContent>
-
           {products?.data && <DataTable columns={columns} data={products?.data} onDelete={handleDeleteClick} onEdit={handleEditClick} />}
         </CardContent>
       </Card>

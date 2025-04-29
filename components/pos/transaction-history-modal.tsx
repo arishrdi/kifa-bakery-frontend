@@ -30,8 +30,8 @@ interface TransactionHistoryModalProps {
 export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: TransactionHistoryModalProps) {
   const [date, setDate] = useState<Date>(new Date())
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(1)), // Tanggal 1 bulan ini
-    to: new Date() // Hari ini
+    from: new Date(new Date().setDate(1)), 
+    to: new Date() 
   });
 
   const handleDateRangeChange = (newRange: { from?: Date; to?: Date }) => {
@@ -53,7 +53,7 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
     const searchLower = searchQuery.toLowerCase();
     return (
       transaction.order_number.toLowerCase().includes(searchLower) ||
-      transaction.user.toLowerCase().includes(searchLower)
+      transaction.user.name.toLowerCase().includes(searchLower)
     );
   }) || [];
 
