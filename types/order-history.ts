@@ -20,6 +20,8 @@ export interface HistoryOrder {
     total_revenue:  string;
     average_order_value: number;
     total_items_sold: number;
+    gross_sales: string;
+    total_discount: number;
     date_from:      string;
     date_to:        string;
     orders:         OrderItem[];

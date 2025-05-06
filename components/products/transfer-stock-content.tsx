@@ -19,9 +19,9 @@ import { Product } from "@/types/product"
 import { toast } from "@/hooks/use-toast"
 import { getCookie } from "cookies-next"
 
-export default function TransferStokContent() {
+export default function TransferStokContent({search}: {search: string}) {
   const { currentOutlet } = useOutlet()
-  const [searchQuery, setSearchQuery] = useState("")
+  // const [searchQuery, setSearchQuery] = useState("")
   const [isTransferStockDialogOpen, setIsTransferStockDialogOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
@@ -182,7 +182,11 @@ export default function TransferStokContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products?.data.map((product) => (
+              {products?.data.filter(product => 
+                product.name.toLowerCase().includes(search) ||
+                product.sku.toLowerCase().includes(search)
+              ).
+              map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>{product.sku}</TableCell>
                   <TableCell>

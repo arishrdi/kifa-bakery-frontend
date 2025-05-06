@@ -104,23 +104,41 @@ export default function PerDay({ dateRange, setDateRange }: RealtimeStockProps) 
 
           {/* Summary Section */}
           {transactionData?.data.total_orders && (
+            <div className="space-y-4">
+            {/* Baris Pertama */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg border p-4">
+                <h3 className="text-sm text-center font-medium">Total Order</h3>
+                <p className="text-2xl text-center font-bold">
+                  {transactionData.data.total_orders}
+                </p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <h3 className="text-sm text-center font-medium">Total Item</h3>
+                <p className="text-2xl text-center font-bold">
+                  {transactionData.data.total_items_sold}
+                </p>
+              </div>
+            </div>
+
+            {/* Baris Kedua */}
             <div className="grid grid-cols-4 gap-4">
               <div className="rounded-lg border p-4">
-                <h3 className="text-sm font-medium">Total Penjualan</h3>
+                <h3 className="text-sm font-medium">Penjualan Bersih</h3>
                 <p className="text-2xl font-bold">
                   Rp {Number(transactionData.data.total_revenue).toLocaleString()}
                 </p>
               </div>
               <div className="rounded-lg border p-4">
-                <h3 className="text-sm font-medium">Total Order</h3>
+                <h3 className="text-sm font-medium">Penjualan Kotor</h3>
                 <p className="text-2xl font-bold">
-                  {transactionData.data.total_orders}
+                  Rp {Number(transactionData.data.gross_sales).toLocaleString()}
                 </p>
               </div>
               <div className="rounded-lg border p-4">
-                <h3 className="text-sm font-medium">Total Item</h3>
+                <h3 className="text-sm font-medium">Total Discount</h3>
                 <p className="text-2xl font-bold">
-                  {transactionData.data.total_items_sold}
+                  Rp {transactionData.data.total_discount.toLocaleString()}
                 </p>
               </div>
               <div className="rounded-lg border p-4">
@@ -130,6 +148,7 @@ export default function PerDay({ dateRange, setDateRange }: RealtimeStockProps) 
                 </p>
               </div>
             </div>
+          </div>
           )}
 
           {/* Tabel per Hari */}

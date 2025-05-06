@@ -14,7 +14,7 @@ import { toast } from '@/hooks/use-toast'
 import { id } from 'date-fns/locale'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
 
-export default function ApproveStock() {
+export default function ApproveStock({search}: {search: string}) {
 
     const { currentOutlet } = useOutlet()
     const [date, setDate] = useState<Date>(new Date())
@@ -115,7 +115,8 @@ export default function ApproveStock() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {inventories?.data.map((adjustment) => (
+                            {inventories?.data.filter((adjustment) => adjustment.product?.name.toLowerCase().includes(search) || adjustment?.notes?.toLowerCase().includes(search))
+                            .map((adjustment) => (
                                 <TableRow key={adjustment.id}>
                                     <TableCell className="font-medium">
                                         {adjustment.product?.name || 'Produk tidak ditemukan'}

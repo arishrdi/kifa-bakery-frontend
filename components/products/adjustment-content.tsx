@@ -16,9 +16,9 @@ import { toast } from "@/hooks/use-toast"
 import { createInventoryHistory } from "@/services/inventory-service"
 import { InventoryInput } from "@/types/inventory"
 
-export default function AdjustmentContent() {
+export default function AdjustmentContent({search}: {search: string}) {
   const { currentOutlet } = useOutlet()
-  const [searchQuery, setSearchQuery] = useState("")
+  // const [searchQuery, setSearchQuery] = useState("")
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -217,35 +217,6 @@ export default function AdjustmentContent() {
   return (
     // <div className="flex flex-col space-y-4 p-2 sm:p-4 md:p-6">
       <div>
-      {/* <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Penyesuaian Stok
-        </h2>
-        <div className="relative w-full md:w-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Cari produk..."
-            className="w-full pl-9 md:w-[300px]"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div> */}
-
-      {/* {currentOutlet && (
-        <Alert className="mt-2 mb-4">
-          <Store className="h-4 w-4" />
-          <AlertTitle className="text-sm sm:text-base">
-            Menampilkan halaman penyesuaian stock produk untuk: {currentOutlet.name}
-          </AlertTitle>
-          <AlertDescription className="text-xs sm:text-sm">
-            Data stock produk yang ditampilkan adalah untuk outlet {currentOutlet.name}.
-          </AlertDescription>
-        </Alert>
-      )} */}
-
-      {/* <div className="space-y-4 overflow-x-auto bg-white"> */}
       <div className="space-y-4 overflow-x-auto bg-white dark:bg-gray-900 rounded-lg">
 
         <div className="border rounded-lg overflow-hidden shadow-sm min-w-[300px]">
@@ -261,8 +232,8 @@ export default function AdjustmentContent() {
             <TableBody>
               {products?.data
                 .filter(product =>
-                  product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+                  product.name.toLowerCase().includes(search) ||
+                  product.sku?.toLowerCase().includes(search)
                 )
                 .map((product) => (
                   <TableRow key={product.id} className="hover:bg-orange-50/50 dark:hover:bg-orange-900/10">

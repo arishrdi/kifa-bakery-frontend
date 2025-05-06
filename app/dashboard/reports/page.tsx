@@ -131,13 +131,6 @@ export default function ReportsPage() {
 
   const { data: transactionData } = orderHistory()
 
-  // const { data: salesData, refetch: refetchSales } = useQuery({
-  //   ...getSalesDaily(outletId, format(dateRangeSales.from, 'yyyy-MM-dd'), format(dateRangeSales.to ?? dateRangeSales.from, 'yyyy-MM-dd')),
-  // });
-
-
-
-
   const { data: salesData, refetch: refetchSales } = useQuery({
     ...getSalesDaily(
       outletId,
@@ -149,37 +142,6 @@ export default function ReportsPage() {
   const handleDateRangeChange = (newRange: { from: Date; to: Date }) => {
     setDateRange(newRange);
   };
-
-  // const handleDateRangeSalesChange = (newRange: { from: Date; to: Date }) => {
-
-  //   if (!newRange) return;
-  //   const { from, to } = newRange;
-
-  //   if (from && to && from > to) {
-  //     setDateRangeSales({ from, to: from });
-  //   } else if (!to) {
-  //     setDateRangeSales({ from, to: from })
-  //   }
-
-  //   else {
-  //     setDateRangeSales(newRange);
-  //   }
-  //   refetchSales()
-  // };
-
-  // const handleDateRangeSalesChange = (newRange: { from: Date; to: Date }) => {
-  //   if (!newRange) return;
-
-  //   let { from, to } = newRange;
-
-  //   if (from && to && from > to) {
-  //     // If from is after to, swap them
-  //     [from, to] = [to, from];
-  //   }
-
-  //   setDateRangeSales({ from, to });
-  //   refetchSales();
-  // };
 
   const handleDateRangeSalesChange = (newRange: { from?: Date; to?: Date }) => {
     const { from, to } = newRange;
@@ -223,7 +185,7 @@ export default function ReportsPage() {
   }, [data])
 
   useEffect(() => {
-    // setSearchTerm("");
+    // setSearchTermp("");
     setFilteredMonthlyData(productsData || []);
     setFilteredInventoryData(inventoryData?.data?.products || []);
     setFilteredCategoriesData(data?.data.categories || [])
