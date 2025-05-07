@@ -29,11 +29,14 @@ import { cancelOrder, getHistoryOrders } from "@/services/order-service"
 import { toast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import TransactionDetailDialog from "@/components/transaction-detail-dialog"
+import { useQueryClient } from "@tanstack/react-query"
 
 export default function ClosingPage() {
   const { currentOutlet } = useOutlet()
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "today"
+  const queryClient = useQueryClient();
+
 
   const [date, setDate] = useState<Date>(new Date())
   const query = getCashHistory(currentOutlet?.id ?? 0, format(date, 'yyyy-MM-dd'))
@@ -43,7 +46,7 @@ export default function ClosingPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
 
-  const orderHistory = getHistoryOrders(currentOutlet?.id, format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
+  const orderHistory = getHistoryOrders(currentOutlet?.id ?? 0, format(date, 'yyyy-MM-dd'), format(date, 'yyyy-MM-dd'))
 
   const { data: transactionData, refetch: refetchOrder } = orderHistory()
 
@@ -53,8 +56,11 @@ export default function ClosingPage() {
     cancelOrderMutate.mutate(id, {
       onSuccess: () => {
         refetchOrder()
-        // setRefundPopover(false)
         toast({ description: "Berhasil melakukan refund" })
+      },
+      onError: () => {
+        refetchOrder()
+        toast({ description: "Gagal melakukan refund", variant: "destructive" })
       }
     })
   }

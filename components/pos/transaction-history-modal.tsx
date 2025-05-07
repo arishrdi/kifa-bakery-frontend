@@ -68,69 +68,55 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
         <head>
           <title>Struk Transaksi #${transaction.order_number}</title>
           <style>
-            body {
-              font-family: 'Courier New', monospace;
+          @media print {
+            @page {
+              size: 80mm auto;
               margin: 0;
-              padding: 20px;
-              max-width: 300px;
             }
-           .header {
-              display: flex;
-              align-items: center;
-              gap: 15px;
-              margin-bottom: 20px;
-            }
-            
-            .header-text {
-              flex: 1;
-              text-align: right;
-            }
-            
-            .logo-container {
-              display: flex;
-              align-items: center;
-            }
-            
-            .logo {
-              max-width: 50px;
-              height: auto;
-            }
-            
-            .title {
-              font-size: 16px;
-              font-weight: bold;
-              margin-bottom: 4px;
-            }
-            .info {
+
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: 'Courier New', monospace;
               font-size: 12px;
-              margin: 5px 0;
             }
+
+            .header, .info, .item, .footer {
+              margin: 0;
+              padding: 0;
+            }
+
             .divider {
               border-top: 1px dashed #000;
-              margin: 10px 0;
+              margin: 5px 0;
             }
+
             .item {
               display: flex;
               justify-content: space-between;
               font-size: 12px;
-              margin: 5px 0;
             }
+
             .total {
               font-weight: bold;
-              margin-top: 10px;
               text-align: right;
+              margin-top: 5px;
             }
-            .footer {
-              text-align: center;
-              margin-top: 20px;
-              font-size: 12px;
-            }
-            .logo {
-              max-width: 40px; 
-              height: auto; 
-              margin-bottom: 10px;
-            }
-          </style>
+          }
+
+          body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            max-width: 300px;
+          }
+
+          .logo {
+            max-width: 40px;
+            margin-bottom: 5px;
+          }
+        </style>
+
         </head>
         <body>
           <div class="header">
@@ -231,6 +217,15 @@ export function TransactionHistoryModal({ open, onOpenChange, refetchBalance }: 
       alert('Tidak dapat membuka jendela cetak. Periksa pengaturan popup browser Anda.')
     }
   }
+
+  // const handlePrintReceipt = async(transaction: OrderItem, outlet: Outlet) => {
+  //   await fetch('/api/print', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({ transaction, outlet, templateData }),
+  //   });
+  // }
+  
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
